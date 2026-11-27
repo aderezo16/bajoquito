@@ -1,7 +1,7 @@
 {
   "name": "bajo-quito",
   "version": "0.1.0",
-  "description": "Bajo Quito \u2014 juego web sobre la gesti\u00f3n del metro (prueba 3D)",
+  "description": "Bajo Quito — juego web sobre la gestión del metro (prueba 3D)",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
@@ -12,6 +12,7 @@
     "three": "^0.187.0"
   },
   "devDependencies": {
+    "@types/node": "^26.6.11",
     "@types/three": "^0.187.0",
     "typescript": "^7.0.2",
     "vite": "^8.4.0",

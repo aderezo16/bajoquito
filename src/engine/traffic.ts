@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { Geo } from './geo';
+import { Geo, rng } from './geo';
+import { approved } from '../models';
 import { LANES, PALETTE, SLICE, SLICE_X0, SLICE_X1, TRACKS, TUNNEL_Y, stationX } from '../world/config';
 import { Crossing, MAT } from '../world/surface';
 
@@ -28,14 +29,7 @@ export function updateSignals(cs: Crossing[], t: number) {
 // ---------- buses ----------
 function busMesh(color: number) {
   const g = new Geo();
-  const L = 1.6, Wd = 0.56, H = 0.58;
-  g.box(-L / 2, 0.08, -Wd / 2, L, H - 0.08, Wd, color);
-  g.box(-L / 2 + 0.02, H, -Wd / 2 + 0.03, L - 0.04, 0.03, Wd - 0.06, 0xe8ecf6);
-  for (let k = 0; k < 4; k++) g.box(-L / 2 + 0.25 + k * 0.32, 0.3, -Wd / 2 - 0.006, 0.24, 0.18, Wd + 0.012, 0xfff0c8, true);
-  g.panelX(L / 2 + 0.005, 0.26, -Wd / 2 + 0.04, Wd - 0.08, 0.24, 0x9fd3ff, true);
-  g.panelX(L / 2 + 0.006, 0.12, -Wd / 2 + 0.06, 0.08, 0.06, 0xfff3c4, true);
-  g.panelX(L / 2 + 0.006, 0.12, Wd / 2 - 0.14, 0.08, 0.06, 0xfff3c4, true);
-  for (const wx of [-L / 2 + 0.3, L / 2 - 0.35]) for (const wz of [-Wd / 2 - 0.01, Wd / 2 - 0.05]) g.box(wx, 0, wz, 0.18, 0.16, 0.06, 0x0b1020);
+  approved('bus').build(g, rng(1), { x: -0.8, z: -0.28, color });       // centred on the origin
   return g.build(clipSolid, clipGlow, 'bus');
 }
 
@@ -95,23 +89,7 @@ export class Buses {
 // ---------- metro trains ----------
 function trainMesh() {
   const g = new Geo();
-  const car = 1.72, W = 0.6, H = 0.62;
-  for (const off of [-car / 2 - 0.02, car / 2 + 0.02]) {
-    const x0 = off - car / 2;
-    g.box(x0, 0.12, -W / 2, car, H, W, 0xf3f6fc);
-    g.box(x0, 0.2, W / 2, car, 0.06, 0.005, 0xff6b2c);
-    g.box(x0, 0.2, -W / 2 - 0.005, car, 0.06, 0.005, 0xff6b2c);
-    g.box(x0 + 0.12, 0.38, -W / 2 - 0.006, car - 0.24, 0.24, W + 0.012, 0xfff0c8, true);
-    for (let k = 0; k < 6; k++) {                     // passengers: silhouettes against the lit windows
-      const px = x0 + 0.2 + k * 0.25 + ((k * 7) % 3) * 0.02;
-      for (const side of [1, -1]) {
-        const z = side * (W / 2 + 0.014) - (side < 0 ? 0.004 : 0);
-        g.box(px - 0.035, 0.46, z, 0.07, 0.08, 0.004, 0x1b2340);
-        g.box(px - 0.06, 0.38, z, 0.12, 0.08, 0.004, PALETTE.people[(k * 3 + (side > 0 ? 0 : 1)) % 7]);
-      }
-    }
-  }
-  g.panelX(car + 0.04, 0.34, -W / 2 + 0.06, W - 0.12, 0.26, 0x9fd3ff, true);
+  approved('tren').build(g, rng(1), { x: -(1.72 + 0.04), z: -0.3 });   // centred on the origin
   return g.build(trainSolid, trainGlow, 'train');
 }
 

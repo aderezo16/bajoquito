@@ -1,7 +1,20 @@
 import * as THREE from 'three';
 import { Geo, rng } from '../engine/geo';
 import { AV, F1, F2, LANES, PALETTE, R1, R2, SIDEWALK, SLAB, SLICE, SLICE_X0, SLICE_X1, STATIONS, stationX, streetX } from './config';
-import { catedral, colonialBlock, concejo, house, lamp, municipio, stationPavilion, trafficPole, tree } from './models';
+import { approved } from '../models';
+import { Geo as G, Rng } from '../engine/geo';
+
+/** The game always uses the APPROVED version of each model (see src/models). */
+const use = (id: string) => (g: G, r: Rng, p: Record<string, number | boolean>) => approved(id).build(g, r, { x: 0, z: 0, ...approved(id).defaults, ...p } as never);
+const catedral = (g: G, r: Rng, x: number, z: number, w: number, d: number) => use('catedral')(g, r, { x, z, w, d });
+const colonialBlock = (g: G, r: Rng, x: number, z: number, w: number, d: number, h = 0.75, lit = 0.22) => use('manzana-colonial')(g, r, { x, z, w, d, h, lit });
+const concejo = (g: G, r: Rng, x: number, z: number, w: number, d: number) => use('concejo')(g, r, { x, z, w, d });
+const municipio = (g: G, r: Rng, x: number, z: number, w: number, d: number) => use('municipio')(g, r, { x, z, w, d });
+const house = (g: G, r: Rng, x: number, z: number, w: number, d: number, h: number, wall: number, roof: number) => use('casa')(g, r, { x, z, w, d, h, wall, roof });
+const tree = (g: G, r: Rng, x: number, z: number, k = 1) => use('arbol')(g, r, { x, z, k });
+const lamp = (g: G, x: number, z: number) => use('farol')(g, rng(1), { x, z });
+const trafficPole = (g: G, x: number, z: number) => use('semaforo')(g, rng(1), { x, z });
+const stationPavilion = (g: G, x: number, zc: number, broken = false) => use('estacion-superficie')(g, rng(1), { x: x - 1.55, z: 1.35, zc, broken });
 
 export interface Place { id: string; name: string; kind: 'station' | 'building'; view: 'sup' | 'sub'; group: THREE.Object3D; anchor: THREE.Vector3; hit: THREE.Object3D[] }
 

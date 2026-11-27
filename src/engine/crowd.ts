@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { Mood, MOOD_COLOR, PALETTE } from '../world/config';
+import { model } from '../models';
+import { PERSON_PARTS } from '../models/people';
 
 /** One step of a route. People only ever walk along routes built from these. */
 export type Step =
@@ -49,8 +51,7 @@ export class Crowd {
 
   constructor(readonly cap = 400) {
     this.material = new THREE.MeshStandardMaterial({ roughness: 0.7, flatShading: true });
-    const body = new THREE.CapsuleGeometry(0.06, 0.13, 3, 8); body.translate(0, 0.125, 0);
-    const head = new THREE.SphereGeometry(0.054, 8, 6); head.translate(0, 0.29, 0);
+    const { body, head } = PERSON_PARTS[model('persona').approved]();
     this.bodies = new THREE.InstancedMesh(body, this.material, cap);
     this.heads = new THREE.InstancedMesh(head, this.material, cap);
     for (const m of [this.bodies, this.heads]) { m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.castShadow = true; m.frustumCulled = false; m.count = 0; }

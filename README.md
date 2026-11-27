@@ -14,12 +14,18 @@ Juego web sobre la gestión del metro de una ciudad inspirada en Quito. Esta es 
 | Carpeta | Qué hay |
 |---|---|
 | `src/world/config.ts` | Trazado de la línea, estaciones, bandas de la ciudad, paleta |
-| `src/world/models.ts` | Modelos hechos con código: casas, manzanas coloniales, Municipio, Concejo, catedral, estaciones… |
+| `src/models/` | **Registro de modelos**: cada elemento con sus versiones; el juego usa solo la *aprobada*, el catálogo muestra también la *en revisión* |
 | `src/world/surface.ts` · `underground.ts` | Arman la superficie y el subsuelo del tramo |
 | `src/world/life.ts` | Rutas de la gente: veredas, cruces con semáforo, bocas de estación, andenes |
 | `src/engine/` | Cámara, multitudes (instancias), buses, trenes y semáforos |
 | `src/ui/` | Pins y barra de estaciones |
+| `src/catalog/` · `catalogo.html` | Catálogo de modelos: visor 3D, día/noche, persona de escala, comparar versiones |
 | `tests/` | Pruebas automáticas |
+
+## Cómo se aprueba un modelo
+
+En `src/models/<archivo>.ts`, cada `register({...})` tiene `approved` (la que usa el juego) y, si hay una nueva en prueba, `review`.
+Para aprobar: `approved: 'v2'` y quitar `review`. Las pruebas verifican que todas las versiones se construyan y respeten la escala.
 
 ## Comandos
 
