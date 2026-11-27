@@ -51,7 +51,9 @@ export class Crowd {
 
   constructor(readonly cap = 400) {
     this.material = new THREE.MeshStandardMaterial({ roughness: 0.7, flatShading: true });
-    const { body, head } = PERSON_PARTS[model('persona').approved]();
+    const parts = (PERSON_PARTS[model('persona').approved] ?? PERSON_PARTS.v1)();
+    const { body, head } = parts;
+    if (parts.vertexColors) { this.material.vertexColors = true; this.material.flatShading = false; }
     this.bodies = new THREE.InstancedMesh(body, this.material, cap);
     this.heads = new THREE.InstancedMesh(head, this.material, cap);
     for (const m of [this.bodies, this.heads]) { m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.castShadow = true; m.frustumCulled = false; m.count = 0; }

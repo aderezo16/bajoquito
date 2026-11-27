@@ -153,11 +153,13 @@ export class Geo {
   }
 
   /** Bounding box of everything added so far. */
-  bounds() {
+  /** Bounding box of everything written so far, or only of what came after a `count()` taken earlier. */
+  bounds(from?: { solid: number; glow: number }) {
     const b = new THREE.Box3();
-    for (const g of [...this.solid, ...this.glow]) { g.computeBoundingBox(); b.union(g.boundingBox!); }
+    for (const g of [...this.solid.slice(from?.solid ?? 0), ...this.glow.slice(from?.glow ?? 0)]) { g.computeBoundingBox(); b.union(g.boundingBox!); }
     return b;
   }
+  count() { return { solid: this.solid.length, glow: this.glow.length }; }
 
   build(solidMat: THREE.Material, glowMat: THREE.Material, name = ''): THREE.Group {
     const grp = new THREE.Group();

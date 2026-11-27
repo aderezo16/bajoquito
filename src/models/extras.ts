@@ -27,11 +27,12 @@ const hex = (c: string) => parseInt(String(c).replace('#', ''), 16) || 0x999999;
 /** Builds a model version with its hidden parts and its added pieces. The game and the catalog both use this. */
 export function buildModel(v: Version, g: Geo, r: Rng, p: Params) {
   g.hidden = new Set(parseList<string>(p.__ocultar));
+  const start = g.count();   // the game writes many models into one Geo: measure only this one
   v.build(g, r, p);
   g.tag(null); g.hidden = new Set();
   const extras = parseList<Extra>(p.__extras);
   if (!extras.length) return;
-  const b = g.bounds();
+  const b = g.bounds(start);
   const ox = Number.isFinite(b.min.x) ? b.min.x : p.x, oz = Number.isFinite(b.min.z) ? b.min.z : p.z;
   for (const e of extras) addExtra(g, e, ox, oz);
 }

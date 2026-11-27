@@ -54,3 +54,15 @@ describe('parts and added pieces', () => {
     expect(antenna.y).toBeGreaterThan(base.y + 0.5);
   });
 });
+
+describe('added pieces in a shared scene', () => {
+  it('stay on their model when the Geo already holds other things', () => {
+    const v = approved('catedral');
+    const alone = new Geo(); buildModel(v, alone, rng(3), { x: 20, z: 5, ...v.defaults } as never);
+    const shared = new Geo(); shared.box(-40, 0, -30, 1, 1, 1, 0xffffff);
+    const start = shared.count();
+    buildModel(v, shared, rng(3), { x: 20, z: 5, ...v.defaults } as never);
+    const a = alone.bounds(), s = shared.bounds(start);
+    expect(s.min.x).toBeCloseTo(a.min.x, 3); expect(s.max.y).toBeCloseTo(a.max.y, 3);
+  });
+});

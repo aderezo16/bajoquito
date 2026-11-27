@@ -5,7 +5,34 @@ import { approved, buildModel } from '../models';
 import { Geo as G, Rng } from '../engine/geo';
 
 /** The game always uses the APPROVED version of each model (see src/models). */
-const use = (id: string) => (g: G, r: Rng, p: Record<string, number | boolean>) => buildModel(approved(id), g, r, { x: 0, z: 0, ...approved(id).defaults, ...p } as never);
+const use = (id: string) => (g: G, r: Rng, p: Record<string, number | boolean>) => buildModel(approved(id), g, r, fit(id, p) as never);
+
+/**
+ * The game gives each model a lot (x, z, w, d …). Models designed in the workshop keep their own look
+ * (colors, parts, added pieces); here they only adapt their size to the lot, within the limits of their settings.
+ * A model with added pieces keeps the exact size it was designed at and is centered in its lot.
+ */
+const hex = (n: number) => '#' + n.toString(16).padStart(6, '0');
+function fit(id: string, p: Record<string, number | boolean>) {
+  const v = approved(id), out: Record<string, number | boolean | string> = { x: 0, z: 0, ...v.defaults, ...p };
+  if (!v.settings) return out;
+  const range = (k: string) => v.settings!.find(s => s.k === k && s.t === 'num') as { min: number; max: number } | undefined;
+  const clampTo = (k: string, val: number) => { const s = range(k); return s ? Math.max(s.min, Math.min(s.max, val)) : undefined; };
+  const sized = (wKey: string, dKey: string) => {
+    const w = p.w as number | undefined, d = p.d as number | undefined;
+    if (w === undefined || d === undefined) return;
+    const fixed = typeof v.defaults.__extras === 'string' && v.defaults.__extras.length > 2;
+    const nw = fixed ? (v.defaults[wKey] as number) : clampTo(wKey, w), nd = fixed ? (v.defaults[dKey] as number) : clampTo(dKey, d);
+    if (nw !== undefined) { out[wKey] = nw; out.x = (p.x as number) + Math.max(0, (w - nw) / 2); }
+    if (nd !== undefined) { out[dKey] = nd; out.z = (p.z as number) + Math.max(0, (d - nd) / 2); }
+  };
+  switch (id) {
+    case 'casa': sized('ancho', 'fondo'); if (typeof p.h === 'number') out.alto = clampTo('alto', p.h + 0.12) ?? out.alto; if (typeof p.roof === 'number') out.techo = hex(p.roof); break;
+    case 'manzana-colonial': case 'municipio': case 'concejo': case 'catedral': sized('ancho', 'fondo'); break;
+    case 'arbol': { const k = (p.k as number) ?? 1; out.altura = (v.defaults.altura as number) * k; out.copa = (v.defaults.copa as number) * k; break; }
+  }
+  return out;
+}
 const catedral = (g: G, r: Rng, x: number, z: number, w: number, d: number) => use('catedral')(g, r, { x, z, w, d });
 const colonialBlock = (g: G, r: Rng, x: number, z: number, w: number, d: number, h = 0.75, lit = 0.22) => use('manzana-colonial')(g, r, { x, z, w, d, h, lit });
 const concejo = (g: G, r: Rng, x: number, z: number, w: number, d: number) => use('concejo')(g, r, { x, z, w, d });
@@ -83,7 +110,8 @@ export function buildSurface() {
       for (const [tx, tz] of [[0.9, 0.9], [w - 0.9, 0.9], [0.9, R1.z1 - R1.z0 - 0.9], [w - 0.9, R1.z1 - R1.z0 - 0.9]]) tree(g, r, x0 + tx, R1.z0 + tz, 0.85);
       for (let k = 0; k < 4; k++) g.box(x0 + 1.2 + k * 0.9, 0, R1.z1 - 0.5, 0.45, 0.12, 0.14, 0x6b4a2e);
     } else {
-      colonialBlock(g, r, x0, R1.z0, w, R1.z1 - R1.z0, 0.75, 0.22);
+      // at Alameda the back row belongs to the Concejo (built as an interactive place below)
+      if (i !== 7) colonialBlock(g, r, x0, R1.z0, w, R1.z1 - R1.z0, 0.75, 0.22);
       colonialBlock(g, r, x0, R2.z0, w, R2.z1 - R2.z0, 0.8, 0.12);
     }
     // front rows: low houses (never taller than the avenue needs)
