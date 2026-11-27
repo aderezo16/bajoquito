@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Geo, rng } from '../engine/geo';
 import { SLAB, SLICE, SLICE_X0, SLICE_X1, STATIONS, TRACKS, TUNNEL_Y, stationX, streetX } from './config';
 import { MAT, Place } from './surface';
-import { approved } from '../models';
+import { approved, buildModel } from '../models';
 
 const Y = TUNNEL_Y;
 /** Own materials so the surface can fade out without touching the underground. */
@@ -69,7 +69,7 @@ export function buildUnderground() {
   for (let i = SLICE.from; i <= SLICE.to; i++) {
     const x = stationX(i);
     const pg = new Geo();
-    approved('estacion-subterranea').build(pg, rng(i), { x: x - 2.6, z: 0, y: Y, broken: i === 2, withTrack: false });
+    buildModel(approved('estacion-subterranea'), pg, rng(i), { ...approved('estacion-subterranea').defaults, x: x - 2.6, z: 0, y: Y, broken: i === 2, withTrack: false } as never);
     const grp = pg.build(SUBMAT.solid.clone(), SUBMAT.glow, `st${i}-sub`);
     const sign = label(STATIONS[i], 2.4, 0.42);
     sign.position.set(x - 0.1, Y + 2.45, -4.28);
@@ -87,7 +87,7 @@ export function buildUnderground() {
   {
     const bx0 = streetX(SLICE.from) + 0.6, bx1 = streetX(SLICE.from + 2) - 0.4, bz0 = 4.9, bz1 = 9.4;
     const pg = new Geo();
-    approved('bodega').build(pg, rng(2), { x: bx0, z: bz0, w: bx1 - bx0, d: bz1 - bz0, y: Y });
+    buildModel(approved('bodega'), pg, rng(2), { ...approved('bodega').defaults, x: bx0, z: bz0, w: bx1 - bx0, d: bz1 - bz0, y: Y } as never);
     const grp = pg.build(SUBMAT.solid.clone(), SUBMAT.glow, 'bodega');
     const hit = new THREE.Mesh(new THREE.BoxGeometry(bx1 - bx0, 1.8, bz1 - bz0), MAT.hit);
     hit.position.set((bx0 + bx1) / 2, Y + 0.9, (bz0 + bz1) / 2); hit.userData.place = 'bodega';

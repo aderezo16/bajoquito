@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import { Geo, rng } from '../engine/geo';
 import { AV, F1, F2, LANES, PALETTE, R1, R2, SIDEWALK, SLAB, SLICE, SLICE_X0, SLICE_X1, STATIONS, stationX, streetX } from './config';
-import { approved } from '../models';
+import { approved, buildModel } from '../models';
 import { Geo as G, Rng } from '../engine/geo';
 
 /** The game always uses the APPROVED version of each model (see src/models). */
-const use = (id: string) => (g: G, r: Rng, p: Record<string, number | boolean>) => approved(id).build(g, r, { x: 0, z: 0, ...approved(id).defaults, ...p } as never);
+const use = (id: string) => (g: G, r: Rng, p: Record<string, number | boolean>) => buildModel(approved(id), g, r, { x: 0, z: 0, ...approved(id).defaults, ...p } as never);
 const catedral = (g: G, r: Rng, x: number, z: number, w: number, d: number) => use('catedral')(g, r, { x, z, w, d });
 const colonialBlock = (g: G, r: Rng, x: number, z: number, w: number, d: number, h = 0.75, lit = 0.22) => use('manzana-colonial')(g, r, { x, z, w, d, h, lit });
 const concejo = (g: G, r: Rng, x: number, z: number, w: number, d: number) => use('concejo')(g, r, { x, z, w, d });

@@ -8,6 +8,8 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { Geo, rng } from '../engine/geo';
 import { Group, Look, ModelDef, Setting, Version, approved, model, models, status } from '../models';
 import { loadAll, save, Saved, where } from './store';
+import { buildModel, Extra, parseList, partsOf } from '../models/extras';
+import { Change, ChatState, setupChat } from './chat';
 
 type P = Record<string, number | boolean | string>;
 
@@ -64,7 +66,7 @@ let base: P = {};                      // the version's defaults
 
 function buildOne(v: Version, p: P, withP: boolean) {
   const g = new Geo();
-  v.build(g, rng(7), { x: 0, z: 0, ...p, noche: night } as never);
+  buildModel(v, g, rng(7), { x: 0, z: 0, ...p, noche: night } as never);
   const grp = g.build(solidMats[v.look ?? 'flat'], glowMat);
   const box = new THREE.Box3().setFromObject(grp);
   const c = box.getCenter(new THREE.Vector3());
@@ -73,7 +75,7 @@ function buildOne(v: Version, p: P, withP: boolean) {
     const m = model('persona');
     const use = m.review ? m.versions[m.review] : approved('persona');
     const pp = m.review && saved.get('persona')?.base === m.review ? { ...use.defaults, ...saved.get('persona')!.params } : use.defaults;
-    const pg = new Geo(); use.build(pg, rng(1), { x: 0, z: 0, ...pp } as never);
+    const pg = new Geo(); buildModel(use, pg, rng(1), { x: 0, z: 0, ...pp } as never);
     const pm = pg.build(solidMats.smooth, glowMat);
     pm.position.set(box.max.x - c.x + 0.2, 0, box.max.z - c.z - 0.15);
     grp.add(pm);
@@ -111,8 +113,9 @@ function rebuild() {
   if (key !== framedFor || sphere > framedSize * 1.2 || sphere < framedSize * 0.6) {
     framedFor = key; framedSize = sphere;
     const fov = THREE.MathUtils.degToRad(camera.fov) * Math.min(1, camera.aspect);
-    const dist = Math.max(sphere, 0.9) / Math.sin(fov / 2) * 1.7;
-    controls.target.set(0, maxH * 0.4, 0);
+    const tall = maxH > Math.max(total, depth) * 1.5;
+    const dist = Math.max(sphere, 0.9) / Math.sin(fov / 2) * (tall ? 1.95 : 1.7);
+    controls.target.set(0, maxH * (tall ? 0.5 : 0.4), 0);
     camera.position.set(dist * 0.6, dist * 0.5, dist * 0.68);
     camera.near = dist / 100; camera.far = dist * 10; camera.updateProjectionMatrix();
     controls.minDistance = sphere * 0.6; controls.maxDistance = sphere * 6;
@@ -163,6 +166,7 @@ const ctlEl = document.getElementById('controls')!, estatus = document.getElemen
 const note = document.getElementById('note') as HTMLTextAreaElement;
 const hex = (v: unknown) => (typeof v === 'string' ? v : '#' + Number(v).toString(16).padStart(6, '0'));
 function loadParams() {
+  undoStack = [];
   const v = current!.versions[version];
   base = { ...(v.defaults as P) };
   const s = saved.get(current!.id);
@@ -201,8 +205,111 @@ function renderEditor() {
     if (s.group && s.group !== group) { group = s.group; const h = document.createElement('h4'); h.textContent = group; ctlEl.appendChild(h); }
     ctlEl.appendChild(control(s));
   }
+  // parts that can be switched off (the chat uses the same names)
+  const info = analyze();
+  if (info && info.parts.length) {
+    const h = document.createElement('h4'); h.textContent = 'Partes'; ctlEl.appendChild(h);
+    const hidden = new Set(parseList<string>(params.__ocultar));
+    for (const pt of info.parts) {
+      const row = document.createElement('label'); row.className = 'ctl';
+      const n = document.createElement('span'); n.textContent = pt.parte.charAt(0).toUpperCase() + pt.parte.slice(1); row.appendChild(n);
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'sw' + (hidden.has(pt.parte) ? '' : ' on');
+      b.onclick = e => { e.preventDefault(); snapshot(); const hs = new Set(parseList<string>(params.__ocultar)); if (hs.has(pt.parte)) hs.delete(pt.parte); else hs.add(pt.parte); setList('__ocultar', [...hs]); b.classList.toggle('on', !hs.has(pt.parte)); renderStatus(); schedule(); };
+      row.appendChild(b); ctlEl.appendChild(row);
+    }
+  }
+  const extras = parseList<Extra>(params.__extras);
+  if (extras.length) {
+    const h = document.createElement('h4'); h.textContent = 'Piezas agregadas'; ctlEl.appendChild(h);
+    for (const e of extras) {
+      const row = document.createElement('div'); row.className = 'extra';
+      const sw = document.createElement('i'); sw.style.background = /^#[0-9a-f]{6}$/i.test(e.color) ? e.color : '#999'; row.appendChild(sw);
+      const n = document.createElement('span'); n.textContent = e.nombre + (e.repetir?.veces && e.repetir.veces > 1 ? ` ×${e.repetir.veces}` : ''); row.appendChild(n);
+      const del = document.createElement('button'); del.textContent = 'Quitar';
+      del.onclick = () => { snapshot(); setList('__extras', parseList<Extra>(params.__extras).filter(x => x.nombre !== e.nombre)); renderEditor(); schedule(); };
+      row.appendChild(del); ctlEl.appendChild(row);
+    }
+  }
   renderStatus();
 }
+
+/** Builds the current version without extras or hidden parts to learn its size, parts and features. */
+function analyze() {
+  if (!current) return null;
+  const v = current.versions[version];
+  const g = new Geo();
+  const p = { ...params }; delete p.__extras; delete p.__ocultar;
+  v.build(g, rng(7), { x: 0, z: 0, ...p, noche: false } as never);
+  const b = g.bounds();
+  const { parts, marks } = partsOf(g, b.min.x, b.min.z);
+  [...g.solid, ...g.glow].forEach(x => x.dispose());
+  return { size: b.getSize(new THREE.Vector3()), parts, marks };
+}
+function setList(k: '__extras' | '__ocultar', list: unknown[]) { if (list.length) params[k] = JSON.stringify(list); else delete params[k]; }
+
+// ---------- undo stack (chat and part switches) ----------
+let undoStack: P[] = [];
+function snapshot() { undoStack.push({ ...params }); if (undoStack.length > 30) undoStack.shift(); chat.refresh(); }
+function undo() { const s = undoStack.pop(); if (!s) return false; params = s; renderEditor(); schedule(); return true; }
+
+// ---------- chat ----------
+const r2 = (n: number) => Math.round(n * 100) / 100;
+function chatState(): ChatState | null {
+  if (!current) return null;
+  const v = current.versions[version];
+  if (!v.settings) return null;
+  const info = analyze()!;
+  const hidden = new Set(parseList<string>(params.__ocultar));
+  return {
+    modelo: current.name, version,
+    tamaño: { ancho: r2(info.size.x), alto: r2(info.size.y), fondo: r2(info.size.z) },
+    ajustes: v.settings.map(s => ({ clave: s.k, etiqueta: s.label, tipo: s.t, ...(s.t === 'num' ? { min: s.min, max: s.max } : {}), ...(s.t === 'sel' ? { opciones: s.opts.map(o => o[0]) } : {}), valor: params[s.k] })),
+    partes: info.parts.map(pt => ({ ...pt, oculta: hidden.has(pt.parte) })),
+    elementos: info.marks,
+    agregados: parseList<Extra>(params.__extras),
+  };
+}
+function applyChange(c: Change): string[] {
+  const v = current!.versions[version];
+  if (!v.settings) return [];
+  const done: string[] = [];
+  snapshot();
+  const set = c.ajustes && typeof c.ajustes === 'object' ? c.ajustes : {};
+  for (const [k, val] of Object.entries(set)) {
+    const s = v.settings.find(x => x.k === k); if (!s) continue;
+    if (s.t === 'num' && typeof val === 'number' && Number.isFinite(val)) params[k] = Math.max(s.min, Math.min(s.max, val));
+    else if (s.t === 'color' && typeof val === 'string' && /^#[0-9a-f]{6}$/i.test(val)) params[k] = val.toUpperCase();
+    else if (s.t === 'bool' && typeof val === 'boolean') params[k] = val;
+    else if (s.t === 'sel' && typeof val === 'string' && s.opts.some(o => o[0] === val)) params[k] = val;
+    else continue;
+    done.push(s.label);
+  }
+  const parts = new Set((analyze()?.parts ?? []).map(x => x.parte));
+  const hs = new Set(parseList<string>(params.__ocultar));
+  for (const n of Array.isArray(c.ocultar) ? c.ocultar : []) if (parts.has(String(n)) && !hs.has(String(n))) { hs.add(String(n)); done.push('sin ' + n); }
+  for (const n of Array.isArray(c.mostrar) ? c.mostrar : []) if (hs.delete(String(n))) done.push('con ' + n);
+  setList('__ocultar', [...hs]);
+  let ex = parseList<Extra>(params.__extras);
+  const rm = new Set((Array.isArray(c.quitar_agregados) ? c.quitar_agregados : []).map(String));
+  if (rm.size) { const before = ex.length; ex = ex.filter(e => !rm.has(e.nombre)); if (ex.length < before) done.push(`−${before - ex.length} pieza(s)`); }
+  for (const e of Array.isArray(c.agregar) ? c.agregar : []) {
+    if (!e || typeof e.nombre !== 'string' || typeof e.forma !== 'string') continue;
+    ex = ex.filter(x => x.nombre !== e.nombre);
+    ex.push({ ...e, nombre: e.nombre.slice(0, 60) });
+    done.push('+ ' + e.nombre);
+  }
+  if (ex.length > 80) ex = ex.slice(-80);
+  setList('__extras', ex);
+  if (!done.length) undoStack.pop();
+  renderEditor(); schedule();
+  return done;
+}
+const chat = setupChat({ state: chatState, apply: applyChange, undo, canUndo: () => undoStack.length > 0 });
+document.querySelectorAll<HTMLButtonElement>('.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+  document.getElementById('pane-ajustes')!.hidden = b.dataset.tab !== 'ajustes';
+  document.getElementById('pane-chat')!.hidden = b.dataset.tab !== 'chat';
+});
 function control(s: Setting) {
   const row = document.createElement('label'); row.className = 'ctl'; row.dataset.k = s.k;
   const name = document.createElement('span'); name.textContent = s.label; row.appendChild(name);
@@ -237,6 +344,7 @@ document.getElementById('bsave')!.onclick = async () => {
   const prev = saved.get(current!.id);
   const changed: P = {};
   for (const k in params) if (String(params[k]) !== String(base[k])) changed[k] = params[k];
+  for (const k of ['__extras', '__ocultar']) if (!(k in params) && k in base) changed[k] = '';
   const s: Saved = { model: current!.id, base: version, params: changed, nota: note.value.trim(), guardado: new Date().toISOString(), n: (prev?.n ?? 0) + 1 };
   estatus.textContent = 'Guardando…';
   try { await save(s); saved.set(s.model, s); renderList(); renderStatus(); }
@@ -244,7 +352,7 @@ document.getElementById('bsave')!.onclick = async () => {
 };
 
 function select(id: string) {
-  current = model(id); version = current.review ?? current.approved; compare = false;
+  current = model(id); version = current.review ?? current.approved; compare = false; chat.reset();
   history.replaceState(null, '', '#' + id);
   loadParams(); renderList(); renderInfo(); renderEditor(); schedule();
 }
@@ -275,4 +383,4 @@ select(models().some(m => m.id === first) ? first : 'edificio');
 setLight(false);
 requestAnimationFrame(loop);
 loadAll().then(s => { saved = s; if (current) { loadParams(); renderList(); renderEditor(); schedule(); } });
-Object.assign(window as unknown as Record<string, unknown>, { __cat: { select, setLight, controls, get params() { return params; } } });
+Object.assign(window as unknown as Record<string, unknown>, { __cat: { select, setLight, controls, applyChange, chatState, undo, get params() { return params; } } });

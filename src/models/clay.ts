@@ -16,6 +16,7 @@ const litAt = (p: Params, r: Rng, share: number) => { const l = r.chance(share);
 
 /** Recessed window on the front (+z) face at depth zf. (cx, cy) = centre. */
 function winFront(g: Geo, cx: number, cy: number, zf: number, w: number, h: number, wall: number, glass: number, lit: boolean, sill = true) {
+  g.mark('ventana (frente)', cx - w / 2, cy - h / 2, zf, cx + w / 2, cy + h / 2, zf + 0.01);
   g.box(cx - w / 2 - 0.025, cy - h / 2 - 0.025, zf - 0.002, w + 0.05, h + 0.05, 0.006, tint(wall, 0.86));       // reveal
   g.box(cx - w / 2, cy + h / 2 - 0.028, zf, w, 0.028, 0.008, tint(wall, 0.58));                                   // inner shadow (top)
   g.box(cx - w / 2, cy - h / 2, zf, 0.022, h, 0.008, tint(wall, 0.66));                                           // inner shadow (left)
@@ -24,6 +25,7 @@ function winFront(g: Geo, cx: number, cy: number, zf: number, w: number, h: numb
 }
 /** Recessed window on the right (+x) face at x = xf. (cz, cy) = centre. */
 function winSide(g: Geo, xf: number, cy: number, cz: number, w: number, h: number, wall: number, glass: number, lit: boolean, sill = true) {
+  g.mark('ventana (costado derecho)', xf, cy - h / 2, cz - w / 2, xf + 0.01, cy + h / 2, cz + w / 2);
   g.box(xf - 0.002, cy - h / 2 - 0.025, cz - w / 2 - 0.025, 0.006, h + 0.05, w + 0.05, tint(wall, 0.84));
   g.box(xf, cy + h / 2 - 0.028, cz - w / 2, 0.008, 0.028, w, tint(wall, 0.55));
   g.box(xf, cy - h / 2, cz + w / 2 - 0.022, 0.008, h, 0.022, tint(wall, 0.62));
@@ -59,7 +61,8 @@ export function edificio(g: Geo, r: Rng, p: Params) {
   const wall = col(p, 'pared'), trim = col(p, 'cornisa'), glass = col(p, 'vidrio'), door = col(p, 'puerta');
   const ww = num(p, 'ventanaAncho'), wh = num(p, 'ventanaAlto'), lit = num(p, 'iluminadas');
   const w = cf * mod + 0.16, d = cs * mod + 0.16, h = fl * fh + 0.08;
-  g.roundBox(x, 0, z, w, h, d, wall, rad);
+  g.tag('cuerpo'); g.roundBox(x, 0, z, w, h, d, wall, rad);
+  g.tag('ventanas');
   for (let f = 0; f < fl; f++) {
     const cy = 0.06 + f * fh + fh * 0.52;
     for (let c = 0; c < cf; c++) {
@@ -77,13 +80,15 @@ export function edificio(g: Geo, r: Rng, p: Params) {
     }
   }
   if (on(p, 'conPuerta')) {
+    g.tag('puerta');
     const cx = x + 0.08 + 0.5 * mod, dw = Math.min(mod * 0.78, 0.36), dh = Math.min(fh * 0.92, 0.4);
+    g.mark('puerta', cx - dw / 2, 0.04, z + d, cx + dw / 2, 0.04 + dh, z + d + 0.012);
     g.box(cx - dw / 2 - 0.03, 0.04, z + d - 0.002, dw + 0.06, dh + 0.03, 0.006, tint(wall, 0.8));
     g.box(cx - dw / 2, 0.04, z + d, dw / 2 - 0.006, dh, 0.012, door);
     g.box(cx + 0.006, 0.04, z + d, dw / 2 - 0.006, dh, 0.012, door);
-    if (on(p, 'escalon')) g.roundBox(cx - dw / 2 - 0.08, 0, z + d - 0.02, dw + 0.16, 0.045, 0.16, trim, 0.02);
+    g.tag('escalón'); if (on(p, 'escalon')) g.roundBox(cx - dw / 2 - 0.08, 0, z + d - 0.02, dw + 0.16, 0.045, 0.16, trim, 0.02);
   }
-  parapetRoof(g, x, z, w, d, h, trim, num(p, 'parapeto'), rad);
+  g.tag('techo'); parapetRoof(g, x, z, w, d, h, trim, num(p, 'parapeto'), rad);
 }
 
 // ---------------- Casa de barrio ----------------
@@ -91,24 +96,28 @@ export function casa(g: Geo, r: Rng, p: Params) {
   const { x, z } = p;
   const w = num(p, 'ancho'), d = num(p, 'fondo'), h = num(p, 'alto'), rad = num(p, 'redondeo');
   const wall = col(p, 'pared'), roof = col(p, 'techo'), door = col(p, 'puerta'), glass = col(p, 'vidrio');
-  g.roundBox(x, 0, z, w, h, d, wall, rad);
+  g.tag('cuerpo'); g.roundBox(x, 0, z, w, h, d, wall, rad);
   const n = Math.round(num(p, 'ventanas'));
   const doorAt = n > 1 ? Math.floor(n / 2) : -1;
   for (let k = 0; k < n; k++) {
     const cx = x + (k + 0.5) * (w / n);
     if (k === doorAt && on(p, 'conPuerta')) {
       const dw = 0.2, dh = Math.min(h * 0.78, 0.36);
+      g.tag('puerta'); g.mark('puerta', cx - dw / 2, 0, z + d, cx + dw / 2, dh, z + d + 0.012);
       g.box(cx - dw / 2 - 0.025, 0.0, z + d - 0.002, dw + 0.05, dh + 0.025, 0.006, tint(wall, 0.8));
       g.box(cx - dw / 2, 0, z + d, dw, dh, 0.012, door);
       g.roundBox(cx - dw / 2 - 0.05, 0, z + d - 0.01, dw + 0.1, 0.035, 0.12, tint(wall, 1.1), 0.015);
       continue;
     }
+    g.tag('ventanas');
     winFront(g, cx, h * 0.55, z + d, 0.2, Math.min(0.24, h * 0.45), wall, glass, litAt(p, r, num(p, 'iluminadas')));
   }
-  winSide(g, x + w, h * 0.55, z + d / 2, 0.2, Math.min(0.24, h * 0.45), wall, glass, litAt(p, r, num(p, 'iluminadas')));
+  g.tag('ventanas'); winSide(g, x + w, h * 0.55, z + d / 2, 0.2, Math.min(0.24, h * 0.45), wall, glass, litAt(p, r, num(p, 'iluminadas')));
+  g.tag('techo');
   if (p.tipoTecho === 'plano') parapetRoof(g, x, z, w, d, h, roof, 0.08, rad);
   else gableRoof(g, x, z, w, d, h, num(p, 'pendiente'), num(p, 'alero'), roof, wall);
   if (on(p, 'jardin')) {
+    g.tag('jardín');
     g.roundBox(x - 0.05, 0, z + d + 0.1, w + 0.1, 0.03, 0.32, 0x7fb069, 0.015);
     for (let k = 0; k < 3; k++) g.blob(x + 0.15 + k * (w - 0.3) / 2, 0.08, z + d + 0.26, 0.07, 0x5f9e55, 0.8, 12);
   }
@@ -120,11 +129,13 @@ export function colonial(g: Geo, r: Rng, p: Params) {
   const w = num(p, 'ancho'), d = num(p, 'fondo'), fl = Math.round(num(p, 'pisos')), rad = num(p, 'redondeo');
   const wall = col(p, 'pared'), roof = col(p, 'teja'), wood = col(p, 'madera'), base = col(p, 'zocalo'), glass = col(p, 'vidrio');
   const t = 0.85, fh = 0.4, h = fl * fh + 0.06;
+  g.tag('cuerpo');
   const wing = (wx: number, wz: number, ww: number, wd: number) => g.roundBox(wx, 0, wz, ww, h, wd, wall, rad);
   wing(x, z, w, t); wing(x, z + t, t, d - 2 * t); wing(x + w - t, z + t, t, d - 2 * t); wing(x, z + d - t, w, t);
-  g.roundBox(x - 0.01, 0, z + d - 0.03, w + 0.02, 0.1, 0.05, base, 0.015);
+  g.tag('zócalo'); g.roundBox(x - 0.01, 0, z + d - 0.03, w + 0.02, 0.1, 0.05, base, 0.015);
   g.roundBox(x + w - 0.03, 0, z - 0.01, 0.05, 0.1, d + 0.02, base, 0.015);
   // tile roofs over each wing
+  g.tag('techo');
   gableRoof(g, x, z + d - t, w, t, h, 0.28, 0.06, roof, wall);
   gableRoof(g, x, z, w, t, h, 0.28, 0.06, tint(roof, 0.95), wall);
   for (const sx of [x, x + w - t]) {
@@ -136,22 +147,26 @@ export function colonial(g: Geo, r: Rng, p: Params) {
     const cx = x + (k + 0.5) * (w / n), cy = 0.06 + f * fh + fh * 0.5;
     if (f === 0 && k === Math.floor(n / 2) && on(p, 'porton')) {
       const dw = 0.34, dh = 0.36;
+      g.tag('portón'); g.mark('porton', cx - dw / 2, 0, z + d, cx + dw / 2, dh, z + d + 0.01);
       g.box(cx - dw / 2 - 0.04, 0, z + d - 0.002, dw + 0.08, dh + 0.04, 0.006, tint(wall, 0.8));
       g.arch(cx - dw / 2, 0, z + d + 0.006, dw, dh, wood);
       continue;
     }
-    winFront(g, cx, cy, z + d, 0.2, 0.26, wall, glass, litAt(p, r, num(p, 'iluminadas')), !(f > 0 && on(p, 'balcones')));
+    g.tag('ventanas'); winFront(g, cx, cy, z + d, 0.2, 0.26, wall, glass, litAt(p, r, num(p, 'iluminadas')), !(f > 0 && on(p, 'balcones')));
     if (f > 0 && on(p, 'balcones')) {
+      g.tag('balcones');
       g.roundBox(cx - 0.16, cy - 0.16, z + d - 0.01, 0.32, 0.035, 0.16, wood, 0.012);
       for (let q = 0; q < 5; q++) g.box(cx - 0.15 + q * 0.072, cy - 0.125, z + d + 0.13, 0.014, 0.12, 0.014, wood);
       g.box(cx - 0.16, cy - 0.01, z + d + 0.125, 0.32, 0.018, 0.024, wood);
     }
   }
+  g.tag('ventanas');
   for (let k = 0; k < Math.max(2, Math.round(n * d / w)); k++) {
     const cz = z + t + (k + 0.5) * ((d - t) / Math.max(2, Math.round(n * d / w)));
     winSide(g, x + w, 0.06 + fh * (fl - 0.5), cz, 0.2, 0.26, wall, glass, litAt(p, r, num(p, 'iluminadas')));
   }
-  g.roundBox(x + t, 0, z + t, w - 2 * t, 0.02, d - 2 * t, 0x7fb069, 0.01);
+  g.tag('patio'); g.roundBox(x + t, 0, z + t, w - 2 * t, 0.02, d - 2 * t, 0x7fb069, 0.01);
+  g.tag('árbol del patio');
   if (on(p, 'arbolPatio')) { g.cyl(x + w / 2, 0, z + d / 2, 0.04, 0.3, 0x7a5233, 8); g.blob(x + w / 2, 0.45, z + d / 2, 0.24, 0x5f9e55, 0.9); }
 }
 
@@ -159,7 +174,8 @@ export function colonial(g: Geo, r: Rng, p: Params) {
 export function arbol(g: Geo, _r: Rng, p: Params) {
   const { x, z } = p, h = num(p, 'altura'), c = num(p, 'copa'), leaf = col(p, 'hojas'), trunk = col(p, 'tronco');
   const cx = x + c, cz = z + c;
-  g.cyl(cx, 0, cz, 0.035 + c * 0.08, h * 0.5, trunk, 10);
+  g.tag('tronco'); g.cyl(cx, 0, cz, 0.035 + c * 0.08, h * 0.5, trunk, 10);
+  g.tag('copa');
   const top = h * 0.5;
   if (p.forma === 'conico') { g.cone(cx, top - 0.05, cz, c * 0.85, h * 0.85, leaf, 10); g.cone(cx, top + h * 0.3, cz, c * 0.6, h * 0.55, tint(leaf, 1.12), 10); }
   else if (p.forma === 'nube') {
@@ -172,8 +188,9 @@ export function arbol(g: Geo, _r: Rng, p: Params) {
 // ---------------- Farol ----------------
 export function farol(g: Geo, _r: Rng, p: Params) {
   const { x, z } = p, h = num(p, 'altura'), pole = col(p, 'poste'), light = col(p, 'luz');
-  g.roundBox(x - 0.06, 0, z - 0.06, 0.12, 0.05, 0.12, tint(pole, 0.85), 0.02);
-  g.cyl(x, 0, z, 0.022, h, pole, 10);
+  g.tag('base'); g.roundBox(x - 0.06, 0, z - 0.06, 0.12, 0.05, 0.12, tint(pole, 0.85), 0.02);
+  g.tag('poste'); g.cyl(x, 0, z, 0.022, h, pole, 10);
+  g.tag('lámpara');
   if (on(p, 'brazo')) {
     g.roundBox(x - 0.02, h - 0.03, z - 0.02, 0.2, 0.035, 0.04, pole, 0.015);
     g.roundBox(x + 0.12, h - 0.09, z - 0.05, 0.12, 0.06, 0.1, pole, 0.02);
@@ -185,16 +202,19 @@ export function farol(g: Geo, _r: Rng, p: Params) {
 export function bus(g: Geo, _r: Rng, p: Params) {
   const { x, z } = p, L = num(p, 'largo'), W = 0.56, H = 0.56, rad = num(p, 'redondeo');
   const body = col(p, 'color'), band = col(p, 'franja'), glass = col(p, 'vidrio');
-  g.roundBox(x, 0.1, z, L, H, W, body, rad);
-  g.roundBox(x + 0.02, 0.18, z - 0.008, L - 0.04, 0.05, W + 0.016, band, 0.02);
+  g.tag('carrocería'); g.roundBox(x, 0.1, z, L, H, W, body, rad);
+  g.tag('franja'); g.roundBox(x + 0.02, 0.18, z - 0.008, L - 0.04, 0.05, W + 0.016, band, 0.02);
+  g.tag('ventanas');
   const n = Math.round(num(p, 'ventanas'));
   for (let k = 0; k < n; k++) {
     const wx = x + 0.12 + k * ((L - 0.42) / n), ww = (L - 0.42) / n - 0.05;
     g.roundBox(wx, 0.34, z - 0.01, ww, 0.2, W + 0.02, glass, 0.02);
   }
-  g.roundBox(x + L - 0.12, 0.3, z + 0.04, 0.14, 0.26, W - 0.08, glass, 0.03);
+  g.tag('parabrisas'); g.roundBox(x + L - 0.12, 0.3, z + 0.04, 0.14, 0.26, W - 0.08, glass, 0.03);
+  g.tag('faros');
   for (const zz of [z + 0.08, z + W - 0.16]) g.blob(x + L + 0.005, 0.2, zz + 0.04, 0.03, 0xfff3c4, 1, 10, true);
   const wr = num(p, 'ruedas');
+  g.tag('ruedas');
   for (const wx of [x + 0.32, x + L - 0.34]) for (const wz of [z - 0.005, z + W + 0.005]) { g.wheel(wx, wr, wz, wr, 0.08, 0x2a2f45); g.wheel(wx, wr, wz, wr * 0.45, 0.1, 0x9aa6c4); }
 }
 
@@ -202,11 +222,12 @@ export function bus(g: Geo, _r: Rng, p: Params) {
 export function persona(g: Geo, _r: Rng, p: Params) {
   const { x, z } = p, s = num(p, 'altura') / 0.32, hd = num(p, 'cabeza');
   const cx = x + 0.08, cz = z + 0.08;
-  g.capsule(cx - 0.025 * s, 0, cz, 0.022 * s, 0.07 * s, col(p, 'pantalon'));
+  g.tag('piernas'); g.capsule(cx - 0.025 * s, 0, cz, 0.022 * s, 0.07 * s, col(p, 'pantalon'));
   g.capsule(cx + 0.025 * s, 0, cz, 0.022 * s, 0.07 * s, col(p, 'pantalon'));
-  g.capsule(cx, 0.08 * s, cz, 0.058 * s, 0.07 * s, col(p, 'ropa'));
+  g.tag('torso'); g.capsule(cx, 0.08 * s, cz, 0.058 * s, 0.07 * s, col(p, 'ropa'));
   const hy = 0.08 * s + 0.07 * s + 0.116 * s + hd * 0.8;
-  g.blob(cx, hy, cz, hd, col(p, 'piel'), 1, 16);
+  g.tag('cabeza'); g.blob(cx, hy, cz, hd, col(p, 'piel'), 1, 16);
+  g.tag('pelo');
   g.blob(cx, hy + hd * 0.34, cz - hd * 0.2, hd * 1.1, col(p, 'pelo'), 0.62, 16);   // hair cap, clear of the face
 }
 
@@ -214,14 +235,17 @@ export function persona(g: Geo, _r: Rng, p: Params) {
 export function estacion(g: Geo, _r: Rng, p: Params) {
   const { x, z } = p, w = num(p, 'ancho'), roofC = col(p, 'techo'), post = col(p, 'postes'), totem = col(p, 'totem');
   const cx = x + 1.55, zc = z + 0.8, rad = 0.04;
-  g.roundBox(cx - 1.55, 0, z, 3.1, 0.03, 2.1, col(p, 'plaza'), 0.015);
+  g.tag('plaza'); g.roundBox(cx - 1.55, 0, z, 3.1, 0.03, 2.1, col(p, 'plaza'), 0.015);
+  g.tag('escalera');
   g.roundBox(cx - 0.55, 0.01, zc - 0.42, 1.1, 0.03, 0.84, 0x1b2340, 0.01);
   for (let k = 0; k < 4; k++) g.box(cx - 0.5, 0.0 - k * 0.0, zc - 0.36 + k * 0.17, 1.0, 0.045 - k * 0.01, 0.15, tint(0x1b2340, 1.4 - k * 0.1));
   const half = w / 2;
+  g.tag('postes');
   for (const [px, pz] of [[-half + 0.08, -0.45], [half - 0.12, -0.45], [-half + 0.08, 0.42], [half - 0.12, 0.42]]) g.roundBox(cx + px, 0, zc + pz, 0.06, 0.86, 0.06, post, 0.025);
-  g.roundBox(cx - half, 0.86, zc - 0.55, w, 0.07, 1.05, roofC, rad);
+  g.tag('techo'); g.roundBox(cx - half, 0.86, zc - 0.55, w, 0.07, 1.05, roofC, rad);
   g.roundBox(cx - half + 0.06, 0.93, zc - 0.49, w - 0.12, 0.015, 0.93, tint(roofC, 1.15), 0.01);
   const th = num(p, 'altoTotem');
+  g.tag('tótem');
   g.roundBox(cx + half + 0.25, 0, zc + 0.35, 0.14, th, 0.14, totem, 0.05);
   g.cyl(cx + half + 0.32, th + 0.02, zc + 0.42, 0.15, 0.05, totem, 24);
   g.cyl(cx + half + 0.32, th + 0.025, zc + 0.42, 0.11, 0.05, 0xffffff, 24, true);

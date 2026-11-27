@@ -31,11 +31,20 @@
       <div id="help">Arrastra para girar · rueda para acercar · clic derecho para mover</div>
     </main>
     <aside id="editor">
-      <div class="eh"><b>Ajustes</b><span id="ebase"></span></div>
-      <div id="controls"></div>
+      <div class="eh"><b id="etitle">Ajustes</b><span id="ebase"></span></div>
+      <div class="tabs"><button data-tab="ajustes" class="on">Ajustes</button><button data-tab="chat">Chat</button></div>
+      <div id="pane-ajustes" class="pane">
+        <div id="controls"></div>
+      </div>
+      <div id="pane-chat" class="pane" hidden>
+        <div id="chatlog"><div class="msg nota"><div>Pídeme cambios en palabras: «ponle toldos verdes a las ventanas del frente», «quita el escalón», «agrega antenas en el techo», «techo más alto». Los aplico al instante; si no te gusta, «Deshacer».</div></div></div>
+        <div id="chatoff" hidden>El chat funciona cuando abres el taller dentro de claude.ai.</div>
+        <div class="chatbox"><textarea id="chatin" rows="2" placeholder="Escribe qué quieres cambiar…"></textarea>
+          <div class="row"><button id="chatsend" class="primary">Enviar</button><button id="chatundo" disabled>Deshacer</button></div></div>
+      </div>
       <div id="save">
         <textarea id="note" rows="2" placeholder="Nota para Claude (opcional): qué buscas con estos cambios"></textarea>
-        <div class="row"><button id="bsave" class="primary">Guardar mis ajustes</button><button id="bundo">Deshacer</button><button id="bbase">Valores base</button></div>
+        <div class="row"><button id="bsave" class="primary">Guardar mis ajustes</button><button id="bundo">Descartar</button><button id="bbase">Valores base</button></div>
         <div id="estatus"></div>
       </div>
     </aside>

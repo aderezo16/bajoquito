@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Geo, rng } from './geo';
-import { approved } from '../models';
+import { approved, buildModel } from '../models';
 import { LANES, PALETTE, SLICE, SLICE_X0, SLICE_X1, TRACKS, TUNNEL_Y, stationX } from '../world/config';
 import { Crossing, MAT } from '../world/surface';
 
@@ -29,7 +29,7 @@ export function updateSignals(cs: Crossing[], t: number) {
 // ---------- buses ----------
 function busMesh(color: number) {
   const g = new Geo();
-  approved('bus').build(g, rng(1), { x: -0.8, z: -0.28, color });       // centred on the origin
+  buildModel(approved('bus'), g, rng(1), { ...approved('bus').defaults, x: -0.8, z: -0.28, color } as never);       // centred on the origin
   return g.build(clipSolid, clipGlow, 'bus');
 }
 
@@ -89,7 +89,7 @@ export class Buses {
 // ---------- metro trains ----------
 function trainMesh() {
   const g = new Geo();
-  approved('tren').build(g, rng(1), { x: -(1.72 + 0.04), z: -0.3 });   // centred on the origin
+  buildModel(approved('tren'), g, rng(1), { ...approved('tren').defaults, x: -(1.72 + 0.04), z: -0.3 } as never);   // centred on the origin
   return g.build(trainSolid, trainGlow, 'train');
 }
 

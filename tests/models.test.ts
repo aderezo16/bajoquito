@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { Geo, rng } from '../src/engine/geo';
-import { approved, models } from '../src/models';
+import { approved, model, models } from '../src/models';
+import { buildModel, partsOf } from '../src/models/extras';
 
 function size(id: string, v: string) {
   const m = models().find(x => x.id === id)!;
@@ -31,5 +32,25 @@ describe('catálogo de modelos', () => {
     const p = size('persona', 'v1').box.max.y;
     expect(p).toBeLessThan(size('casa', 'v1').box.max.y);
     expect(p).toBeLessThan(0.85);
+  });
+});
+
+
+describe('parts and added pieces', () => {
+  const v = model('edificio').versions[model('edificio').approved];
+  const size = (p: Record<string, unknown>) => { const g = new Geo(); buildModel(v, g, rng(3), { x: 0, z: 0, ...v.defaults, ...p } as never); return g; };
+  it('every editable version exposes named parts', () => {
+    for (const m of models()) for (const [id, ver] of Object.entries(m.versions)) {
+      if (!ver.settings) continue;
+      const g = new Geo(); ver.build(g, rng(3), { x: 0, z: 0, ...ver.defaults } as never);
+      expect(partsOf(g, 0, 0).parts.length, `${m.id} ${id}`).toBeGreaterThan(1);
+    }
+  });
+  it('hiding a part and adding a piece change the model', () => {
+    const base = size({}).bounds().getSize(new THREE.Vector3());
+    const noRoof = size({ __ocultar: JSON.stringify(['techo']) }).bounds().getSize(new THREE.Vector3());
+    expect(noRoof.y).toBeLessThan(base.y);
+    const antenna = size({ __extras: JSON.stringify([{ nombre: 'antena', forma: 'cilindro', x: 0.7, y: base.y, z: 0.8, radio: 0.02, alto: 0.6, color: '#888888' }]) }).bounds().getSize(new THREE.Vector3());
+    expect(antenna.y).toBeGreaterThan(base.y + 0.5);
   });
 });

@@ -10,8 +10,25 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 export class Geo {
   solid: THREE.BufferGeometry[] = [];
   glow: THREE.BufferGeometry[] = [];
+  /** Named parts: builders call tag('techo') etc. Parts in `hidden` are skipped (the catalog chat can remove them). */
+  private cur: string | null = null;
+  hidden = new Set<string>();
+  readonly partBounds = new Map<string, THREE.Box3>();
+  /** Individual features (each window, each door…) so the chat knows where things are. */
+  readonly marks: { kind: string; box: THREE.Box3 }[] = [];
+  tag(name: string | null) { this.cur = name; }
+  mark(kind: string, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number) {
+    if (this.cur && this.hidden.has(this.cur)) return;
+    this.marks.push({ kind, box: new THREE.Box3(new THREE.Vector3(x0, y0, z0), new THREE.Vector3(x1, y1, z1)) });
+  }
 
   private push(g: THREE.BufferGeometry, color: number, glow = false) {
+    if (this.cur && this.hidden.has(this.cur)) { g.dispose(); return; }
+    if (this.cur) {
+      g.computeBoundingBox();
+      const b = this.partBounds.get(this.cur);
+      if (b) b.union(g.boundingBox!); else this.partBounds.set(this.cur, g.boundingBox!.clone());
+    }
     const ng = g.index ? g.toNonIndexed() : g;
     if (!ng.getAttribute('normal')) ng.computeVertexNormals();
     if (ng.getAttribute('uv')) ng.deleteAttribute('uv');
@@ -133,6 +150,13 @@ export class Geo {
     g.rotateZ(Math.atan2(y1 - y0, x1 - x0));
     g.translate((x0 + x1) / 2, (y0 + y1) / 2, z);
     this.push(g, color);
+  }
+
+  /** Bounding box of everything added so far. */
+  bounds() {
+    const b = new THREE.Box3();
+    for (const g of [...this.solid, ...this.glow]) { g.computeBoundingBox(); b.union(g.boundingBox!); }
+    return b;
   }
 
   build(solidMat: THREE.Material, glowMat: THREE.Material, name = ''): THREE.Group {
