@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Geo, rng } from '../engine/geo';
-import { AV, F1, F2, LANES, PALETTE, R1, R2, SIDEWALK, SLAB, SLICE, SLICE_X0, SLICE_X1, STATIONS, stationX, streetX } from './config';
+import { AV, F1, F2, LANES, PALETTE, R1, R2, SIDEWALK, SLAB, SLICE, SLICE_X0, SLICE_X1, STATIONS, stationX, streetX, zoneOf } from './config';
 import { approved, buildModel } from '../models';
 import { Geo as G, Rng } from '../engine/geo';
 
@@ -39,11 +39,18 @@ const concejo = (g: G, r: Rng, x: number, z: number, w: number, d: number) => us
 const municipio = (g: G, r: Rng, x: number, z: number, w: number, d: number) => use('municipio')(g, r, { x, z, w, d });
 const house = (g: G, r: Rng, x: number, z: number, w: number, d: number, h: number, wall: number, roof: number) => use('casa')(g, r, { x, z, w, d, h, wall, roof });
 const tree = (g: G, r: Rng, x: number, z: number, k = 1) => use('arbol')(g, r, { x, z, k });
+/** A mid-rise building from the workshop model «Edificio», sized for its lot. */
+const tower = (g: G, r: Rng, x: number, z: number, colsFrente: number, colsLado: number, pisos: number, pared: string) =>
+  buildModel(approved('edificio'), g, r, { ...approved('edificio').defaults, x, z, colsFrente, colsLado, pisos: Math.min(10, pisos), pared, iluminadas: 0.35 } as never);
 const lamp = (g: G, x: number, z: number) => use('farol')(g, rng(1), { x, z });
 const trafficPole = (g: G, x: number, z: number) => use('semaforo')(g, rng(1), { x, z });
 const stationPavilion = (g: G, x: number, zc: number, broken = false) => use('estacion-superficie')(g, rng(1), { x: x - 1.55, z: 1.35, zc, broken });
 
-export interface Place { id: string; name: string; kind: 'station' | 'building'; view: 'sup' | 'sub'; group: THREE.Object3D; anchor: THREE.Vector3; hit: THREE.Object3D[] }
+export interface Place {
+  id: string; name: string; kind: 'station' | 'building'; view: 'sup' | 'sub'; group: THREE.Object3D; anchor: THREE.Vector3; hit: THREE.Object3D[];
+  /** Builds the place again with game-driven settings (crates in the warehouse, workers in the yard…). */
+  rebuild?: (extra: Record<string, unknown>) => void;
+}
 
 export interface Crossing { x: number; heads: { car: THREE.Mesh[]; ped: THREE.Mesh[] }; offset: number }
 
@@ -91,12 +98,47 @@ export function buildSurface() {
   }
 
   // ---------- blocks ----------
+  // Each station has its own neighbourhood: low houses in the south, the colonial centre, towers in the north.
   const lot = (i: number) => [streetX(i) + 0.42, streetX(i + 1) - 0.42] as const;
+  const housesRow = (x0: number, x1: number, z0: number, z1: number, skipNear = -1) => {
+    let xs = x0;
+    while (xs < x1 - 0.6) {
+      const ww = r.pick([1.2, 1.5, 1.8]);
+      const xe = Math.min(x1, xs + ww);
+      if (skipNear >= 0 && Math.abs((xs + xe) / 2 - stationX(skipNear)) < 1.8) { tree(g, r, (xs + xe) / 2, z0 + 0.8, 0.8); xs = xe; continue; }
+      if (xe - xs > 0.8) house(g, r, xs, z0 + 0.3, xe - xs - 0.18, z1 - z0 - 0.55, 0.32 + r.next() * 0.14, r.pick(PALETTE.wallSouth), r.pick(PALETTE.roofSouth));
+      xs = xe;
+    }
+  };
+  const towersRow = (x0: number, x1: number, z0: number, z1: number, fl: [number, number], n = 2) => {
+    const w = (x1 - x0) / n;
+    for (let k = 0; k < n; k++) {
+      const cf = Math.max(2, Math.min(5, Math.floor((w - 0.5) / 0.42))), cs = Math.max(2, Math.min(5, Math.floor((z1 - z0 - 0.6) / 0.42)));
+      const bw = cf * 0.42 + 0.16, bd = cs * 0.42 + 0.16;
+      const bx = x0 + k * w + (w - bw) / 2, bz = z1 - bd - 0.25;
+      tower(g, r, bx, bz, cf, cs, Math.round(fl[0] + r.next() * (fl[1] - fl[0])), r.pick(PALETTE.towers));
+    }
+  };
+  const park = (x0: number, w: number, z0: number, z1: number, n = 16, path = true) => {
+    g.plane(x0, 0.01, z0, w, z1 - z0, 0x1c4a3e);
+    if (path) g.plane(x0 + w / 2 - 0.2, 0.014, z0, 0.4, z1 - z0, 0x3a4c78);
+    for (let k = 0; k < n; k++) {
+      const tx = x0 + 0.35 + r.next() * (w - 0.7), tz = z0 + 0.35 + r.next() * (z1 - z0 - 0.7);
+      if (path && Math.abs(tx - (x0 + w / 2)) < 0.45) continue;
+      if (tz > F1.z1 - 0.2 && tz < F2.z0 + 0.2) continue;
+      tree(g, r, tx, tz, 0.75 + r.next() * 0.3);
+    }
+  };
   for (let i = SLICE.from; i <= SLICE.to; i++) {
     const [x0, x1] = lot(i);
-    const w = x1 - x0;
+    const w = x1 - x0, z = zoneOf(i);
     // back rows
-    if (i === 5) {
+    if (i === 0) {
+      housesRow(x0, x1, R2.z0, R2.z1);                       // terminal goes in R1 (interactive, below)
+    } else if (z === 'sur') {
+      housesRow(x0, x1, R1.z0, R1.z1); housesRow(x0, x1, R2.z0, R2.z1);
+      if (i === 4) towersRow(x0, x1, R2.z0, R2.z1, [2, 3], 1);
+    } else if (i === 5) {
       catedral(g, r, x0 + 0.5, R1.z0 + 0.5, w - 1.0, R1.z1 - R1.z0 - 0.8);
       colonialBlock(g, r, x0, R2.z0, w, R2.z1 - R2.z0, 0.8, 0.12);
     } else if (i === 6) {
@@ -109,51 +151,42 @@ export function buildSurface() {
       g.sphere(x0 + w / 2, 1.18, (R1.z0 + R1.z1) / 2, 0.11, 0xffc857, 8);
       for (const [tx, tz] of [[0.9, 0.9], [w - 0.9, 0.9], [0.9, R1.z1 - R1.z0 - 0.9], [w - 0.9, R1.z1 - R1.z0 - 0.9]]) tree(g, r, x0 + tx, R1.z0 + tz, 0.85);
       for (let k = 0; k < 4; k++) g.box(x0 + 1.2 + k * 0.9, 0, R1.z1 - 0.5, 0.45, 0.12, 0.14, 0x6b4a2e);
-    } else {
+    } else if (z === 'centro') {
       // at Alameda the back row belongs to the Concejo (built as an interactive place below)
       if (i !== 7) colonialBlock(g, r, x0, R1.z0, w, R1.z1 - R1.z0, 0.75, 0.22);
       colonialBlock(g, r, x0, R2.z0, w, R2.z1 - R2.z0, 0.8, 0.12);
-    }
-    // front rows: low houses (never taller than the avenue needs)
-    if (i === 7) {
-      // Alameda park
-      g.plane(x0, 0.01, F1.z0, w, F2.z1 - F1.z0, 0x1c4a3e);
-      g.plane(x0 + w / 2 - 0.2, 0.014, F1.z0, 0.4, F2.z1 - F1.z0, 0x3a4c78);
-      for (let k = 0; k < 16; k++) {
-        const tx = x0 + 0.35 + r.next() * (w - 0.7), tz = F1.z0 + 0.35 + r.next() * (F2.z1 - F1.z0 - 0.7);
-        if (Math.abs(tx - (x0 + w / 2)) < 0.45 || (tz > F1.z1 - 0.2 && tz < F2.z0 + 0.2)) continue;
-        tree(g, r, tx, tz, 0.75 + r.next() * 0.3);
-      }
     } else {
-      for (const [z0, z1] of [[F1.z0, F1.z1], [F2.z0, F2.z1]] as const) {
-        let xs = x0;
-        while (xs < x1 - 0.6) {
-          const ww = r.pick([1.2, 1.5, 1.8]);
-          const xe = Math.min(x1, xs + ww);
-          if (z0 === F1.z0 && Math.abs((xs + xe) / 2 - stationX(i)) < 1.8) { tree(g, r, (xs + xe) / 2, z0 + 0.8, 0.8); xs = xe; continue; }
-          house(g, r, xs, z0 + 0.3, xe - xs - 0.18, z1 - z0 - 0.55, 0.38, PALETTE.wallColonial, r.pick(PALETTE.roofSouth));
-          xs = xe;
-        }
-      }
+      const tall: [number, number] = i === 12 || i === 13 ? [7, 10] : i === 9 ? [3, 5] : [4, 8];
+      if (i !== 11) towersRow(x0, x1, R1.z0, R1.z1, tall); else towersRow(x0 + w * 0.5, x1, R1.z0, R1.z1, tall, 1);
+      towersRow(x0, x1, R2.z0, R2.z1, [tall[0] + 1, tall[1] + 1]);
     }
+    // front rows (kept low so the avenue stays visible)
+    if (i === 7 || i === 8 || i === 11) park(x0, w, F1.z0, F2.z1, i === 11 ? 22 : 16, i !== 11);
+    else if (z === 'norte' && i !== 14) { towersRow(x0, x1, F1.z0, F1.z1, [2, 3]); housesRow(x0, x1, F2.z0, F2.z1); }
+    else { housesRow(x0, x1, F1.z0, F1.z1, i); housesRow(x0, x1, F2.z0, F2.z1); }
     // sidewalk trees and lamps (never in front of the plaza)
     if (i !== 6) for (const tx of [x0 + 0.6, x1 - 0.6]) tree(g, r, tx, SIDEWALK.back - 0.25, 0.85);
     lamp(g, x0 + 0.3, SIDEWALK.front + 0.6);
     lamp(g, x1 - 0.3, SIDEWALK.back + 0.35);
   }
-
   const decor = g.build(MAT.solid, MAT.glow, 'decor');
   root.add(decor);
 
   // ---------- interactive buildings ----------
-  const addPlace = (id: string, name: string, kind: Place['kind'], build: (pg: Geo) => void, hit: THREE.Mesh[], anchor: THREE.Vector3) => {
-    const pg = new Geo(); build(pg);
+  const addPlace = (id: string, name: string, kind: Place['kind'], build: (pg: Geo, extra: Record<string, unknown>) => void, hit: THREE.Mesh[], anchor: THREE.Vector3) => {
     const m = placeMats();
-    const grp = pg.build(m.solid, m.glow, id);
+    const grp = new THREE.Group(); grp.name = id;
+    const fill = (extra: Record<string, unknown>) => {
+      for (const c of [...grp.children]) if (!hit.includes(c as THREE.Mesh)) { grp.remove(c); c.traverse(o => (o as THREE.Mesh).geometry?.dispose()); }
+      const pg = new Geo(); build(pg, extra);
+      const built = pg.build(m.solid, m.glow, id);
+      for (const c of [...built.children]) grp.add(c);
+    };
+    fill({});
     hit.forEach(h => { h.userData.place = id; grp.add(h); });
     grp.userData.place = id;
     root.add(grp);
-    places.push({ id, name, kind, view: 'sup', group: grp, anchor, hit });
+    places.push({ id, name, kind, view: 'sup', group: grp, anchor, hit, rebuild: fill });
   };
   {
     const [x0, x1] = lot(6);
@@ -165,9 +198,23 @@ export function buildSurface() {
     const kx0 = x0 + 0.3, kx1 = x1 - 0.6, kz0 = R1.z0 + 0.3, kz1 = R1.z1 - 0.6;
     addPlace('concejo', 'Concejo Metropolitano', 'building', pg => concejo(pg, rng(4), kx0, kz0, kx1 - kx0, kz1 - kz0), [hitBox(kx0, 0, kz0, kx1 - kx0, 1.9, kz1 - kz0 + 0.3)], new THREE.Vector3((kx0 + kx1) / 2, 2.4, (kz0 + kz1) / 2));
   }
+  {
+    // Medios: the TV tower next to Parque La Carolina
+    const [x0, x1] = lot(11);
+    const v = approved('medios'), w = v.defaults.ancho as number, d = v.defaults.fondo as number, h = (v.defaults.pisos as number) * 0.4 + 0.2;
+    const mx = x0 + ((x1 - x0) / 2 - w) / 2, mz = R1.z1 - d - 0.45;
+    addPlace('medios', 'Medios', 'building', (pg, e) => use('medios')(pg, rng(6), { x: mx, z: mz, ...(e as Record<string, number>) }), [hitBox(mx - 0.1, 0, mz - 0.1, w + 0.2, h, d + 0.5)], new THREE.Vector3(mx + w / 2, h + 1.2, mz + d / 2));
+  }
+  {
+    // Terminal de buses at Quitumbe, the south end of the line
+    const [x0, x1] = lot(0);
+    const v = approved('terminal'), w = v.defaults.ancho as number, d = v.defaults.fondo as number;
+    const tx = x0 + (x1 - x0 - w) / 2, tz = R1.z0 + (R1.z1 - R1.z0 - d) / 2;
+    addPlace('terminal', 'Terminal de buses', 'building', (pg, e) => use('terminal')(pg, rng(8), { x: tx, z: tz, ...(e as Record<string, number>) }), [hitBox(tx, 0, tz, w, 1.5, d)], new THREE.Vector3(tx + w / 2, 2.0, tz + d / 2));
+  }
   for (let i = SLICE.from; i <= SLICE.to; i++) {
     const x = stationX(i);
-    addPlace(`st${i}`, STATIONS[i], 'station', pg => stationPavilion(pg, x, 2.15), [hitBox(x - 1.55, 0, AV.z1, 3.1, 1.4, 2.2)], new THREE.Vector3(x, 1.45, 2.15));
+    addPlace(`st${i}`, STATIONS[i], 'station', (pg, e) => stationPavilion(pg, x, 2.15, !!e.broken), [hitBox(x - 1.55, 0, AV.z1, 3.1, 1.4, 2.2)], new THREE.Vector3(x, 1.45, 2.15));
   }
 
   // ---------- traffic lights (live) ----------

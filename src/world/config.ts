@@ -12,10 +12,14 @@ export const stationX = (i: number) => 6 + i * SPACING;
 /** Cross street between station i-1 and i (i = 0..15). */
 export const streetX = (i: number) => stationX(0) + (i - 0.5) * SPACING;
 
-/** Stations included in this slice of the city (the 3D test). */
-export const SLICE: { from: number; to: number } = { from: 5, to: 7 };
+/** Stations built in 3D: the whole line. */
+export const SLICE: { from: number; to: number } = { from: 0, to: 14 };
+export type Zone = 'sur' | 'centro' | 'norte';
+export const zoneOf = (i: number): Zone => (i <= 4 ? 'sur' : i <= 8 ? 'centro' : 'norte');
 export const SLICE_X0 = streetX(SLICE.from) - 0.2;
 export const SLICE_X1 = streetX(SLICE.to + 1) + 0.2;
+/** Where the underground facilities start (front zone under the houses): yard in the south, warehouse in the centre, control room in the north. */
+export const FACILITY_X = { taller: streetX(0) + 0.6, bodega: streetX(5) + 0.6, control: streetX(12) + 0.8 };
 
 // Depth bands (z)
 export const AV = { z0: -1.3, z1: 1.3 };          // avenue
@@ -40,6 +44,7 @@ export const PALETTE = {
   glass: 0x3d7fd6, window: 0xffd58a, windowDark: 0x17204a,
   people: [0xffc857, 0xff8a5b, 0x7cc4ff, 0xc9b6ff, 0x8ee3c0, 0xf6f1e7, 0xff6b8a],
   bus: [0x3dbe8b, 0xffc857, 0xff8a5b, 0x9fd3ff],
+  towers: ['#E8643C', '#F2E3CC', '#7E8AAE', '#3E6FD0', '#E9EDF5', '#C8583A', '#5FA38C', '#D9A441'],
 };
 
 export type Mood = 'h' | 'n' | 's';

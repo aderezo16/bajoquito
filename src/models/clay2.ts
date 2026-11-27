@@ -163,7 +163,8 @@ export function bodega(g: Geo, r: Rng, p: Params) {
       const ly = 0.1 + l * 0.62;
       g.tag('estantes'); g.roundBox(bx0 + 0.5, Y + ly, zz, w - 1.2, 0.04, 0.62, shelf, 0.01);
       g.tag('cajas');
-      for (let k = 0; k < Math.floor((w - 1.4) / 0.6); k++) if (r.chance(0.8)) g.roundBox(bx0 + 0.6 + k * 0.6, Y + ly + 0.04, zz + 0.06, 0.48, 0.38, 0.5, tint(boxC, 0.9 + r.next() * 0.2), 0.02);
+      const K = Math.floor((w - 1.4) / 0.6), fill = p.llenado === undefined ? 1 : num(p, 'llenado');
+      for (let k = 0; k < K; k++) if (r.chance(0.8) && ((row * lv + l) * K + k) / (rows * lv * K) < fill) g.roundBox(bx0 + 0.6 + k * 0.6, Y + ly + 0.04, zz + 0.06, 0.48, 0.38, 0.5, tint(boxC, 0.9 + r.next() * 0.2), 0.02);
     }
     g.tag('estantes'); for (const px of [bx0 + 0.45, bx1 - 0.72]) g.box(px, Y, zz + 0.55, 0.06, 0.1 + lv * 0.62, 0.06, tint(shelf, 1.2));
   }
@@ -229,6 +230,7 @@ const S: Record<string, Setting[]> = {
     { k: 'filas', label: 'Filas de estantes', t: 'num', min: 1, max: 5, step: 1, group: 'Forma' },
     { k: 'niveles', label: 'Niveles por estante', t: 'num', min: 1, max: 4, step: 1, group: 'Forma' },
     { k: 'montacargas', label: 'Montacargas', t: 'bool', group: 'Forma' },
+    { k: 'llenado', label: 'Estantes llenos (en el juego depende de los repuestos)', t: 'num', min: 0, max: 1, step: 0.05, group: 'Forma' },
     { k: 'pared', label: 'Paredes', t: 'color', group: C }, { k: 'estantes', label: 'Estantes', t: 'color', group: C }, { k: 'cajas', label: 'Cajas', t: 'color', group: C },
   ],
 };
@@ -245,5 +247,5 @@ export function registerClay2() {
   addReview('concejo', concejo, { ancho: 4.0, fondo: 2.75, alto: 1.2, columnas: 6, conCupula: true, cuerpo: '#4A5E96', columnasColor: '#F2EADB', cupula: '#3E8C78', vidrio: '#A9BCCB' }, S.concejo);
   addReview('catedral', catedral, { ancho: 3.9, fondo: 2.85, altoNave: 1.0, torres: true, altoTorres: 2.0, roseton: true, pared: '#EFE8DA', teja: '#C8583A', chapitel: '#6E8F7E', vidrio: '#A9BCCB' }, S.catedral);
   addReview('estacion-subterranea', estacionSub, { y: 0, broken: false, withTrack: true, largoAnden: 4.0, mezzanine: true, escalera: true, bancas: true, pared: '#2A3474', anden: '#5866A8', letrero: '#173E86', escaleraColor: '#3E4C8C' }, S.estacionSub);
-  addReview('bodega', bodega, { ancho: 10.2, fondo: 4.5, y: 0, filas: 3, niveles: 3, montacargas: true, pared: '#3A4580', estantes: '#5D6A9C', cajas: '#B08D6E' }, S.bodega);
+  addReview('bodega', bodega, { ancho: 10.2, fondo: 4.5, y: 0, filas: 3, niveles: 3, montacargas: true, llenado: 1, pared: '#3A4580', estantes: '#5D6A9C', cajas: '#B08D6E' }, S.bodega);
 }

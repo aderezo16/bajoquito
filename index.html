@@ -3,32 +3,26 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Bajo Quito · prueba 3D</title>
+  <title>Bajo Quito</title>
+  <meta name="description" content="Dirige el Metro de una ciudad inspirada en Quito: trenes, cuentas, Concejo y ciudadanía. Un juego sobre cómo funciona lo público." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Caveat:wght@600;700&display=swap" rel="stylesheet" />
 </head>
 <body>
-  <div id="app">
-    <canvas id="scene"></canvas>
-    <div id="pins"></div>
-    <header id="top">
-      <div class="brand"><b>Bajo Quito</b><span>Prueba 3D · tramo Centro</span></div>
-      <div id="views" role="tablist">
-        <button class="vbtn on" data-view="sup" role="tab">
-          <svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/></svg>Superficie</button>
-        <button class="vbtn" data-view="sub" role="tab">
-          <svg viewBox="0 0 24 24"><path d="M4 14h16M6 14v5M18 14v5M8 10l4-6 4 6M12 4v10"/></svg>Bajo tierra</button>
-      </div>
-      <div class="fps" id="fps">— fps</div>
-    </header>
-    <div id="strip"></div>
-    <div id="zoom">
-      <button id="zin" aria-label="Acercar">+</button><button id="zout" aria-label="Alejar">−</button>
-      <div id="zlev"><span></span><span></span><span></span></div>
-    </div>
-    <div id="hint">Arrastra para recorrer · rueda o pellizco para acercar · pasa el mouse sobre un edificio</div>
-    <div id="toast"></div>
-  </div>
+  <canvas id="scene" aria-label="Ciudad en 3D"></canvas>
+  <div id="rainfx"></div>
+  <div id="wrap"><div id="stage">
+    <div id="world"><div id="isoSup"></div><div id="isoSub" style="display:none"></div><svg id="dyn" viewBox="0 0 1440 900" width="1440" height="900" aria-hidden="true" style="pointer-events:none"><g id="dRain"></g><g id="dDust"></g><g id="dBeac"></g></svg></div>
+    <div id="ui"></div>
+    <div id="layer"></div>
+    <div id="top"></div>
+    <div id="fx"></div>
+    <div id="coach"><div id="spot"></div><div id="cbubble"></div></div>
+  </div></div>
+  <div id="line3d"></div>
+  <div id="zoom3d"><button id="zin" aria-label="Acercar">+</button><button id="zout" aria-label="Alejar">−</button></div>
+  <div id="loading"><b>Bajo Quito</b><span>Levantando la ciudad…</span></div>
+  <!--LEGACY-->
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

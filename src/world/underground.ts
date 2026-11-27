@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Geo, rng } from '../engine/geo';
-import { SLAB, SLICE, SLICE_X0, SLICE_X1, STATIONS, TRACKS, TUNNEL_Y, stationX, streetX } from './config';
+import { FACILITY_X, SLAB, SLICE, SLICE_X0, SLICE_X1, STATIONS, TRACKS, TUNNEL_Y, stationX } from './config';
 import { MAT, Place } from './surface';
 import { approved, buildModel } from '../models';
 
@@ -68,33 +68,44 @@ export function buildUnderground() {
   // ---------- stations ----------
   for (let i = SLICE.from; i <= SLICE.to; i++) {
     const x = stationX(i);
-    const pg = new Geo();
-    buildModel(approved('estacion-subterranea'), pg, rng(i), { ...approved('estacion-subterranea').defaults, x: x - 2.6, z: 0, y: Y, broken: i === 2, withTrack: false } as never);
-    const grp = pg.build(SUBMAT.solid.clone(), SUBMAT.glow, `st${i}-sub`);
-    const sign = label(STATIONS[i], 2.4, 0.42);
-    sign.position.set(x - 0.1, Y + 2.45, -4.28);
-    grp.add(sign);
+    const grp = new THREE.Group(); grp.name = `st${i}-sub`;
+    const mat = SUBMAT.solid.clone();
     const hit = new THREE.Mesh(new THREE.BoxGeometry(4.8, 3.0, 7.2), MAT.hit);
     hit.position.set(x - 0.25, Y + 1.5, -0.8); hit.userData.place = `st${i}`;
-    grp.add(hit); grp.userData.place = `st${i}`;
+    const sign = label(STATIONS[i], 2.4, 0.42);
+    sign.position.set(x - 0.1, Y + 2.45, -4.28);
+    const fill = (e: Record<string, unknown>) => {
+      for (const c of [...grp.children]) if (c !== hit && c !== sign) { grp.remove(c); c.traverse(o => (o as THREE.Mesh).geometry?.dispose()); }
+      const pg = new Geo();
+      buildModel(approved('estacion-subterranea'), pg, rng(i), { ...approved('estacion-subterranea').defaults, x: x - 2.6, z: 0, y: Y, broken: !!e.broken, withTrack: false } as never);
+      for (const c of [...pg.build(mat, SUBMAT.glow, `st${i}-sub`).children]) grp.add(c);
+    };
+    fill({});
+    grp.add(sign, hit); grp.userData.place = `st${i}`;
     root.add(grp);
-    places.push({ id: `st${i}`, name: STATIONS[i], kind: 'station', view: 'sub', group: grp, anchor: new THREE.Vector3(x - 0.2, Y + 3.25, -4.3), hit: [hit] });
-    const lamp = new THREE.PointLight(0xffd9a0, 6, 6, 1.6);
-    lamp.position.set(x, Y + 1.6, -1.6); root.add(lamp);
+    places.push({ id: `st${i}`, name: STATIONS[i], kind: 'station', view: 'sub', group: grp, anchor: new THREE.Vector3(x - 0.2, Y + 3.25, -4.3), hit: [hit], rebuild: fill });
   }
 
-  // ---------- bodega (warehouse) in the front zone ----------
-  {
-    const bx0 = streetX(SLICE.from) + 0.6, bx1 = streetX(SLICE.from + 2) - 0.4, bz0 = 4.9, bz1 = 9.4;
-    const pg = new Geo();
-    buildModel(approved('bodega'), pg, rng(2), { ...approved('bodega').defaults, x: bx0, z: bz0, w: bx1 - bx0, d: bz1 - bz0, y: Y } as never);
-    const grp = pg.build(SUBMAT.solid.clone(), SUBMAT.glow, 'bodega');
-    const hit = new THREE.Mesh(new THREE.BoxGeometry(bx1 - bx0, 1.8, bz1 - bz0), MAT.hit);
-    hit.position.set((bx0 + bx1) / 2, Y + 0.9, (bz0 + bz1) / 2); hit.userData.place = 'bodega';
-    grp.add(hit); grp.userData.place = 'bodega';
+  // ---------- facilities in the front zone: yard (south), warehouse (centre), control room (north) ----------
+  const facility = (id: string, name: string, model: string, x0: number, z0: number, seed: number, extra: Record<string, unknown> = {}) => {
+    const v = approved(model), w = v.defaults.ancho as number, d = v.defaults.fondo as number;
+    const grp = new THREE.Group(); grp.name = id;
+    const mat = SUBMAT.solid.clone();
+    const hit = new THREE.Mesh(new THREE.BoxGeometry(w, 1.8, d), MAT.hit);
+    hit.position.set(x0 + w / 2, Y + 0.9, z0 + d / 2); hit.userData.place = id;
+    const fill = (e: Record<string, unknown>) => {
+      for (const c of [...grp.children]) if (c !== hit) { grp.remove(c); c.traverse(o => (o as THREE.Mesh).geometry?.dispose()); }
+      const pg = new Geo();
+      buildModel(v, pg, rng(seed), { ...v.defaults, ...extra, ...e, x: x0, z: z0, y: Y } as never);
+      for (const c of [...pg.build(mat, SUBMAT.glow, id).children]) grp.add(c);
+    };
+    fill({});
+    grp.add(hit); grp.userData.place = id;
     root.add(grp);
-    places.push({ id: 'bodega', name: 'Bodega', kind: 'building', view: 'sub', group: grp, anchor: new THREE.Vector3((bx0 + bx1) / 2, Y + 2.2, bz0 + 1.5), hit: [hit] });
-    const l = new THREE.PointLight(0xffe3a0, 3.5, 8, 1.2); l.position.set((bx0 + bx1) / 2, Y + 2.6, (bz0 + bz1) / 2); root.add(l);
-  }
+    places.push({ id, name, kind: 'building', view: 'sub', group: grp, anchor: new THREE.Vector3(x0 + w / 2, Y + 2.3, z0 + d * 0.35), hit: [hit], rebuild: fill });
+  };
+  facility('taller', 'Taller y cocheras', 'taller', FACILITY_X.taller, 5.0, 11);
+  facility('bodega', 'Bodega', 'bodega', FACILITY_X.bodega, 4.9, 2);
+  facility('control', 'Control de trenes', 'control', FACILITY_X.control, 5.4, 13);
   return { root, places };
 }

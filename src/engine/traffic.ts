@@ -40,6 +40,8 @@ export class Buses {
   private list: Vehicle[] = [];
   private nextSpawn = { 1: 0, [-1]: 3 } as Record<string, number>;
   private colorK = 0;
+  /** Average seconds between buses in each direction (more agreements with operators, more buses). */
+  interval = 9;
   /** `occupied(x)` tells whether someone is still on the crossing at x. */
   constructor(private crossings: Crossing[], private occupied: (x: number) => boolean = () => false) {}
 
@@ -53,7 +55,7 @@ export class Buses {
           if (dir === -1) mesh.rotation.y = Math.PI;
           this.group.add(mesh);
           this.list.push({ mesh, x, v: 1.6, dir, lane: dir === 1 ? LANES.east : LANES.west, len: 1.6, dwell: 0 });
-          this.nextSpawn[dir] = t + 7 + Math.random() * 6;
+          this.nextSpawn[dir] = t + this.interval * (0.8 + Math.random() * 0.5);
         }
       }
     }
@@ -100,16 +102,19 @@ export class Trains {
   readonly list: (Vehicle & { state: TrainState })[] = [];
   private nextSpawn = { 1: 1, [-1]: 8 } as Record<string, number>;
   onArrive: (station: number, dir: 1 | -1) => void = () => {};
+  /** Seconds between trains in each direction (the game sets it from the frequency). */
+  headway = 30;
 
   update(dt: number, t: number) {
     for (const dir of [1, -1] as const) {
-      if (t >= this.nextSpawn[dir] && !this.list.some(v => v.dir === dir)) {
+      const entry = dir === 1 ? SLICE_X0 - 2.5 : SLICE_X1 + 2.5;
+      if (t >= this.nextSpawn[dir] && this.list.every(v => v.dir !== dir || Math.abs(v.x - entry) > 6)) {
         const mesh = trainMesh();
         if (dir === -1) mesh.rotation.y = Math.PI;
         this.group.add(mesh);
         const x = dir === 1 ? SLICE_X0 - 2.5 : SLICE_X1 + 2.5;
         this.list.push({ mesh, x, v: 2.6, dir, lane: dir === 1 ? TRACKS.east : TRACKS.west, len: 3.5, dwell: 0, done: new Set(), state: { dir, x, dwellingAt: null } });
-        this.nextSpawn[dir] = t + 16;
+        this.nextSpawn[dir] = t + this.headway;
       }
     }
     for (const tr of this.list) {
@@ -123,7 +128,9 @@ export class Trains {
           const sx = stationX(i);
           if ((sx - tr.x) * tr.dir >= -0.01 && !tr.done!.has(i) && (stop === undefined || Math.abs(sx - tr.x) < Math.abs(stop - tr.x))) stop = sx;
         }
-        const dist = stop === undefined ? Infinity : Math.abs(stop - tr.x);
+        let dist = stop === undefined ? Infinity : Math.abs(stop - tr.x);
+        // never get too close to the train ahead
+        for (const o of this.list) if (o !== tr && o.dir === tr.dir) { const gap = (o.x - tr.x) * tr.dir - 4.4; if (gap > -1 && gap < dist) dist = Math.max(0, gap); }
         const vmax = 2.8, dec = 1.4;
         const target = Math.min(vmax, Math.sqrt(2 * dec * dist));
         tr.v += Math.sign(target - tr.v) * Math.min(Math.abs(target - tr.v), (target < tr.v ? dec * 1.6 : 1.0) * dt);

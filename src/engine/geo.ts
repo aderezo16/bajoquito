@@ -8,6 +8,8 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
  * Merging keeps draw calls low, which is what makes a whole city cheap to render.
  */
 export class Geo {
+  /** The game draws a whole city: lighter geometry there. The workshop keeps full detail. */
+  static lowDetail = false;
   solid: THREE.BufferGeometry[] = [];
   glow: THREE.BufferGeometry[] = [];
   /** Named parts: builders call tag('techo') etc. Parts in `hidden` are skipped (the catalog chat can remove them). */
@@ -49,7 +51,10 @@ export class Geo {
   }
   /** Box with rounded edges (soft scale-model look). */
   roundBox(x: number, y: number, z: number, w: number, h: number, d: number, color: number, radius = 0.06, glow = false) {
-    const g = new RoundedBoxGeometry(w, h, d, 3, Math.min(radius, w / 2, h / 2, d / 2));
+    const rr = Math.min(radius, w / 2, h / 2, d / 2);
+    let g: THREE.BufferGeometry;
+    if (Geo.lowDetail && (rr < 0.015 || Math.max(w, h, d) < 0.14)) g = new THREE.BoxGeometry(w, h, d);
+    else g = new RoundedBoxGeometry(w, h, d, Geo.lowDetail ? (Math.min(w, h, d) < 0.5 ? 1 : 2) : 3, rr);
     g.translate(x + w / 2, y + h / 2, z + d / 2);
     this.push(g, color, glow);
   }
@@ -61,20 +66,21 @@ export class Geo {
   }
   /** Rounded box centred at (cx,cy,cz), rotated (radians, XYZ order). Used for sloped roof panels. */
   rbox(cx: number, cy: number, cz: number, w: number, h: number, d: number, rx: number, ry: number, rz: number, color: number, radius = 0.03) {
-    const g = new RoundedBoxGeometry(w, h, d, 2, Math.min(radius, w / 2, h / 2, d / 2));
+    const g = new RoundedBoxGeometry(w, h, d, Geo.lowDetail ? 1 : 2, Math.min(radius, w / 2, h / 2, d / 2));
     g.rotateX(rx); g.rotateY(ry); g.rotateZ(rz);
     g.translate(cx, cy, cz);
     this.push(g, color);
   }
   /** Wheel: cylinder lying along z. */
   wheel(x: number, y: number, z: number, r: number, w: number, color: number) {
-    const g = new THREE.CylinderGeometry(r, r, w, 16);
+    const g = new THREE.CylinderGeometry(r, r, w, Geo.lowDetail ? 10 : 16);
     g.rotateX(Math.PI / 2); g.translate(x, y, z);
     this.push(g, color);
   }
   /** Smooth sphere / ellipsoid. */
   blob(x: number, y: number, z: number, r: number, color: number, sy = 1, seg = 20, glow = false) {
-    const g = new THREE.SphereGeometry(r, seg, Math.max(8, seg * 0.6));
+    const s = Geo.lowDetail ? Math.min(seg, 12) : seg;
+    const g = new THREE.SphereGeometry(r, s, Math.max(6, Math.round(s * 0.6)));
     g.scale(1, sy, 1); g.translate(x, y, z);
     this.push(g, color, glow);
   }

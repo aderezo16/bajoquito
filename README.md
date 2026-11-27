@@ -1,31 +1,43 @@
 # Bajo Quito
 
-Juego web sobre la gestión del metro de una ciudad inspirada en Quito. Esta es la base técnica en 3D.
+Juego web sobre la gestión del Metro de una ciudad inspirada en Quito. Personas e instituciones ficticias; mezcla datos públicos con supuestos marcados.
+
+Dos páginas:
+
+- **`index.html` — el juego.** Ciudad en 3D con las 15 estaciones (superficie y bajo tierra) y, encima, la interfaz y la lógica del juego: episodios, fichas de acción, ventanas de cada edificio, Concejo, Gallito, finanzas, bandeja, eventos, tutorial y final.
+- **`catalogo.html` — el taller de modelos.** Para ajustar cada modelo 3D (controles, interruptores de partes y un chat que agrega o quita piezas) y guardar los ajustes.
 
 ## Cómo está hecho
 
-- **Three.js** para el mundo 3D, **TypeScript** para el código y **Vite** para compilar.
-- Cámara fija tipo maqueta (ortográfica) con arrastre, rebote en los bordes, inercia corta, zoom con rueda o pellizco y tres niveles de zoom.
-- Las ventanas, los pins y la barra de estaciones son HTML encima del 3D.
-- La profundidad (qué tapa a qué) la resuelve la tarjeta gráfica: nada se dibuja encima de lo que tiene delante.
+- **Three.js** para la ciudad, **TypeScript** para el código 3D y **Vite** para compilar.
+- La **lógica y las ventanas del juego** vienen del prototipo v0.9 y viven en `legacy/parts/*.js` (scripts que comparten un mismo ámbito). Vite los une en orden y los pone en la página del juego (`vite.config.ts`, plugin `legacy-game`).
+- El juego y la ciudad hablan por `window.BQ3D` (`src/main.ts`):
+  - el juego le dice a la ciudad qué pasó (`apply`): salud de los trenes, escaleras dañadas, fallas, publicidad, limpieza, apagones, repuestos en bodega, mantenimiento en el taller, protestas, escándalos, ánimo de cada zona, lluvia, frecuencia de trenes y buses;
+  - la ciudad mueve los marcadores del juego sobre cada edificio y, al hacer clic en un edificio 3D, abre su ventana;
+  - `focus` lleva la cámara al edificio de la ventana o del paso del tutorial; `setBuildings` y `rise` muestran los edificios que se abren en cada episodio.
+- Cámara fija tipo maqueta (ortográfica) con arrastre, inercia, zoom con rueda o pellizco. La barra de la línea (abajo a la izquierda) lleva a cualquier estación.
+- En el juego la geometría se arma con menos detalle (`Geo.lowDetail`); el taller usa el detalle completo. Si el equipo va lento, el juego baja la resolución sola.
 
 ## Carpetas
 
 | Carpeta | Qué hay |
 |---|---|
-| `src/world/config.ts` | Trazado de la línea, estaciones, bandas de la ciudad, paleta |
-| `src/models/` | **Registro de modelos**: cada elemento con sus versiones; el juego usa solo la *aprobada*, el catálogo muestra también la *en revisión* |
-| `src/world/surface.ts` · `underground.ts` | Arman la superficie y el subsuelo del tramo |
-| `src/world/life.ts` | Rutas de la gente: veredas, cruces con semáforo, bocas de estación, andenes |
-| `src/engine/` | Cámara, multitudes (instancias), buses, trenes y semáforos |
-| `src/ui/` | Pins y barra de estaciones |
-| `src/catalog/` · `catalogo.html` | Catálogo de modelos: visor 3D, día/noche, persona de escala, comparar versiones |
+| `legacy/parts/` | Lógica e interfaz del juego (modelo económico, episodios, personajes, ventanas, flujo del mes, eventos, tutorial). `50_city3d.js` es el puente con la ciudad 3D |
+| `legacy/game.css` | Estilos de la interfaz del juego |
+| `src/main.ts` | La ciudad 3D y el puente `BQ3D` |
+| `src/game/effects.ts` | Todo lo que en la ciudad responde al juego |
+| `src/world/` | Trazado de la línea y barrios (`config.ts`), superficie, subsuelo, rutas de la gente |
+| `src/models/` | **Registro de modelos**: cada elemento con sus versiones; el juego usa solo la *aprobada* |
+| `src/models/approvals.ts` | Qué versión usa el juego y qué ajustes del taller se convirtieron en versión |
+| `src/engine/` | Geometría, cámara, multitudes, buses, trenes, semáforos |
+| `src/catalog/` | Taller de modelos y su chat |
 | `tests/` | Pruebas automáticas |
 
-## Cómo se aprueba un modelo
+## Cómo pasa un modelo del taller al juego
 
-En `src/models/<archivo>.ts`, cada `register({...})` tiene `approved` (la que usa el juego) y, si hay una nueva en prueba, `review`.
-Para aprobar: `approved: 'v2'` y quitar `review`. Las pruebas verifican que todas las versiones se construyan y respeten la escala.
+1. En el taller ajustas el modelo y aprietas «Guardar mis ajustes».
+2. Le pides a Claude «pasa X al juego»: los ajustes guardados se convierten en una versión nueva en `src/models/approvals.ts` y se aprueban.
+3. Pruebas, compilación y publicación.
 
 ## Comandos
 
@@ -40,8 +52,3 @@ npm run build    # genera la carpeta dist/ para publicar
 
 Cada cambio en la rama `main` se compila y se sube a Hostinger por FTP (`.github/workflows/deploy.yml`).
 Hace falta configurar en GitHub los secretos `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD` y la variable `FTP_DIR`.
-
-## Estado
-
-Prueba 3D del tramo Centro (Magdalena, San Francisco y Alameda), con superficie y bajo tierra.
-Siguiente: catálogo de modelos, mapa completo de las 15 estaciones y traslado del juego (capítulos, decisiones y ventanas).

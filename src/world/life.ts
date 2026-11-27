@@ -2,12 +2,16 @@ import * as THREE from 'three';
 import { Crowd, Step } from '../engine/crowd';
 import { pedCanCross } from '../engine/traffic';
 import { Trains } from '../engine/traffic';
-import { AV, Mood, R1, SLICE, TUNNEL_Y, stationX, streetX } from './config';
+import { AV, FACILITY_X, Mood, R1, SLICE, TUNNEL_Y, stationX, streetX } from './config';
 import { Crossing } from './surface';
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 const pick = <T,>(a: readonly T[]) => a[Math.floor(Math.random() * a.length)];
-const MOODS: Mood[] = ['h', 'h', 'h', 'n'];
+/** What the game tells the crowds: where the camera is, how happy the city is, how full each station gets. */
+export const LIFE = { focusX: stationX(6), happy: 0.72, crowd: Array(15).fill(0.5) as number[] };
+const near = (i: number, span = 2) => Math.abs(stationX(i) - LIFE.focusX) <= span * 5.8 + 3;
+/** Mood of someone who just showed up: happier city, more smiles. */
+function moodNow(): Mood { const h = LIFE.happy, r = Math.random(); return r < h * 0.95 ? 'h' : r < h * 0.95 + (1 - h) * 0.55 ? 'n' : 's'; }
 
 /**
  * Surface pedestrians. Every route uses only sidewalks, crossings (with the light) and station mouths,
@@ -19,10 +23,11 @@ export class SurfaceLife {
     for (let k = 0; k < 40; k++) this.spawn(true);
     this.plazaPeople();
   }
-  private stations() { const s: number[] = []; for (let i = SLICE.from; i <= SLICE.to; i++) s.push(i); return s; }
+  private stations() { const s: number[] = []; for (let i = SLICE.from; i <= SLICE.to; i++) if (near(i)) s.push(i); return s.length ? s : [6]; }
   private doors() {
     const d: number[] = [];
-    for (let i = SLICE.from; i <= SLICE.to; i++) { const c = (streetX(i) + streetX(i + 1)) / 2; d.push(c - 1.4, c, c + 1.4); }
+    for (let i = SLICE.from; i <= SLICE.to; i++) { if (!near(i)) continue; const c = (streetX(i) + streetX(i + 1)) / 2; d.push(c - 1.4, c, c + 1.4); }
+    if (!d.length) d.push(stationX(6));
     return d;
   }
   private crossingFor(a: number, b: number) {
@@ -43,7 +48,7 @@ export class SurfaceLife {
     const r = Math.random();
     const st = pick(this.stations());
     const door = pick(this.doors());
-    const mood = pick(MOODS), face = Math.random() < 0.35;
+    const mood = moodNow(), face = Math.random() < 0.35;
     const front = 1.78, back = -1.95;
     let start: THREE.Vector3, route: Step[];
     if (r < 0.42) {                                         // from a house door on the back row to the metro
@@ -51,7 +56,7 @@ export class SurfaceLife {
       start = V(door, 0, R1.z1 - 0.05);
       route = [{ appear: true }, { to: V(door, 0, back) }, { to: V(c.x + 0.12, 0, back) }, ...this.cross(c, true), { to: V(stationX(st), 0, front) }, ...this.mouthIn(st)];
     } else if (r < 0.62) {                                  // up a front street to the metro
-      const sx = streetX(SLICE.from + Math.floor(Math.random() * (SLICE.to - SLICE.from + 2))) + 0.14;
+      const sx = streetX(st + (Math.random() < 0.5 ? 0 : 1)) + 0.14;
       start = V(sx, 0, 6.7);
       route = [{ appear: true }, { to: V(sx, 0, front) }, { to: V(stationX(st), 0, front) }, ...this.mouthIn(st)];
     } else if (r < 0.88) {                                  // coming out of the metro, going home
@@ -82,7 +87,7 @@ export class SurfaceLife {
   update() {
     if (this.clock.t > this.next) {
       const alive = this.crowd.agents.filter(a => a.alive && a.tag === 'sup').length;
-      if (alive < 55) this.spawn();
+      if (alive < 70) this.spawn();
       this.next = this.clock.t + 0.35;
     }
   }
@@ -93,10 +98,10 @@ export class UndergroundLife {
   private next = 0;
   constructor(private crowd: Crowd, private trains: Trains, private clock: { t: number }) {
     const Y = TUNNEL_Y + 0.22;
-    for (let i = SLICE.from; i <= SLICE.to; i++) for (let k = 0; k < 5; k++) { this.waiter(i, 'back', true); if (k < 4) this.waiter(i, 'front', true); }
+    for (let i = SLICE.from; i <= SLICE.to; i++) if (near(i, 3)) for (let k = 0; k < 4; k++) { this.waiter(i, 'back', true); if (k < 3) this.waiter(i, 'front', true); }
     trains.onArrive = (i, dir) => this.alight(i, dir);
     // warehouse workers
-    const bx = streetX(SLICE.from) + 1.2;
+    const bx = FACILITY_X.bodega + 0.6;
     for (let k = 0; k < 3; k++) {
       const route: Step[] = [];
       for (let j = 0; j < 40; j++) route.push({ to: V(bx + Math.random() * 7, TUNNEL_Y, 5.6 + Math.floor(Math.random() * 3) * 1.35 + 0.15) }, { stand: 2 + Math.random() * 4 });
@@ -121,10 +126,11 @@ export class UndergroundLife {
       : [{ appear: true }];
     const start = side === 'back' ? V(x - 2.4, Y + 2.04, -3.5) : V(x + 1.95, Y + 0.22, 2.05);
     const route: Step[] = [...(initial ? [] : pre), { to: s }, { hold: () => !this.trains.dwelling(i, dir) }, { to: board }, { vanish: true }];
-    const mood: Mood = Math.random() < 0.8 ? 'h' : 'n';
+    const mood: Mood = moodNow();
     this.crowd.spawn(initial ? s : start, route, { mood, face: Math.random() < 0.4, tag: `w${i}${side}` });
   }
   alight(i: number, dir: 1 | -1) {
+    if (!near(i, 3)) return;
     const x = stationX(i), Y = TUNNEL_Y;
     const n = 2 + Math.floor(Math.random() * 3);
     for (let k = 0; k < n; k++) {
@@ -139,9 +145,13 @@ export class UndergroundLife {
   update() {
     if (this.clock.t < this.next) return;
     this.next = this.clock.t + 0.8;
-    for (let i = SLICE.from; i <= SLICE.to; i++) for (const side of ['back', 'front'] as const) {
-      const n = this.crowd.agents.filter(a => a.alive && a.tag === `w${i}${side}`).length;
-      if (n < (side === 'back' ? 6 : 4) && Math.random() < 0.5) this.waiter(i, side);
+    for (let i = SLICE.from; i <= SLICE.to; i++) {
+      if (!near(i, 3)) continue;
+      const want = 1 + Math.round(LIFE.crowd[i] * 8);           // fuller stations when trains are late or many travel
+      for (const side of ['back', 'front'] as const) {
+        const n = this.crowd.agents.filter(a => a.alive && a.tag === `w${i}${side}`).length;
+        if (n < (side === 'back' ? want : Math.ceil(want * 0.7)) && Math.random() < 0.5) this.waiter(i, side);
+      }
     }
   }
 }
