@@ -1,0 +1,45 @@
+html, body { margin: 0; height: 100%; overflow: hidden; background: #050816; font-family: Inter, system-ui, sans-serif; color: #eaf0ff; }
+#app { position: fixed; inset: 0; background: radial-gradient(120% 90% at 50% 10%, #16245e 0%, #0b1236 55%, #050816 100%); }
+#scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+#scene.drag { cursor: grabbing; }
+#scene.hover { cursor: pointer; }
+
+#top { position: absolute; left: 0; right: 0; top: 0; height: 72px; display: flex; align-items: center; gap: 24px; padding: 0 22px; pointer-events: none;
+  background: linear-gradient(#050816e6, #05081600); }
+#top > * { pointer-events: auto; }
+.brand { display: flex; flex-direction: column; }
+.brand b { font: 700 19px Sora, Inter, sans-serif; letter-spacing: .01em; }
+.brand span { font-size: 12px; color: #9db0da; }
+#views { margin: 0 auto; display: flex; background: rgba(9, 17, 42, .92); border: 1px solid #2e4a8f; border-radius: 8px; padding: 4px; gap: 4px; }
+.vbtn { display: flex; align-items: center; gap: 8px; border: 0; background: transparent; color: #c9d5f2; font: 600 14px Inter; padding: 9px 16px; border-radius: 5px; cursor: pointer; }
+.vbtn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.vbtn.on { background: #ffc857; color: #1b2340; }
+.fps { font: 600 11px Inter; color: #7f95c9; min-width: 64px; text-align: right; }
+
+#pins { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.pin { position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer; display: flex; flex-direction: column; align-items: center; will-change: transform; transition: opacity .25s; }
+.pin .chip { display: flex; align-items: center; gap: 7px; background: rgba(9, 17, 42, .94); border: 1.5px solid #3a5ba8; border-radius: 16px; padding: 4px 11px 4px 4px; font: 600 12.5px Inter; white-space: nowrap; box-shadow: 0 6px 16px rgba(0, 0, 0, .4); }
+.pin .ic { width: 24px; height: 24px; border-radius: 50%; background: #ffc857; display: grid; place-items: center; }
+.pin .ic svg { width: 15px; height: 15px; stroke: #1b2340; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.pin .stem { width: 2px; height: 10px; background: #3a5ba8; }
+.pin.s .chip { padding: 3px 10px 3px 3px; font-size: 11.5px; border-color: #2e4a8f; gap: 6px; }
+.pin.s .ic { width: 18px; height: 18px; background: #2f79e0; color: #fff; font: 700 10px Sora, Inter; }
+.pin.hl .chip { border-color: #ffc857; background: #1c2f6b; }
+[data-level="far"] .pin.s { opacity: 0; pointer-events: none; }
+
+#strip { position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); width: 860px; height: 58px; background: rgba(9, 17, 42, .9); border: 1px solid #2e4a8f; border-radius: 8px; }
+#strip svg { display: block; }
+#strip .dot { cursor: pointer; }
+#strip .dot.off { cursor: default; opacity: .45; }
+#strip text { font: 600 9.5px Inter; fill: #9db0da; }
+#strip .dot.on text { fill: #eaf0ff; }
+
+#zoom { position: absolute; right: 18px; bottom: 20px; display: flex; flex-direction: column; gap: 6px; }
+#zoom button { width: 40px; height: 40px; border-radius: 5px; background: rgba(9, 17, 42, .94); border: 1px solid #2e4a8f; color: #fff; font-size: 22px; font-weight: 600; cursor: pointer; }
+#zoom button:hover { border-color: #ffc857; }
+#zlev { height: 24px; display: flex; align-items: flex-end; justify-content: center; gap: 3px; }
+#zlev span { width: 10px; border-radius: 2px; background: #2e4a8f; }
+#zlev span:nth-child(1) { height: 6px } #zlev span:nth-child(2) { height: 10px } #zlev span:nth-child(3) { height: 14px }
+#zlev span.on { background: #ffc857; }
+#hint { position: absolute; left: 50%; bottom: 92px; transform: translateX(-50%); background: rgba(9, 17, 42, .88); border: 1px solid #2e4a8f; border-radius: 20px; padding: 7px 16px; color: #c9d5f2; font-size: 13px; transition: opacity .6s; pointer-events: none; }
+#toast { position: absolute; left: 50%; top: 88px; transform: translateX(-50%); background: #ffc857; color: #1b2340; font-weight: 700; font-size: 14px; padding: 9px 16px; border-radius: 4px; opacity: 0; transition: opacity .25s; pointer-events: none; }
