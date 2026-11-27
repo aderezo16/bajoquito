@@ -104,6 +104,14 @@ export function buildUnderground() {
     root.add(grp);
     places.push({ id, name, kind: 'building', view: 'sub', group: grp, anchor: new THREE.Vector3(x0 + w / 2, Y + 2.3, z0 + d * 0.35), hit: [hit], rebuild: fill });
   };
+  // service corridors from the front platform down to each facility, with a row of lamps
+  const cg = new Geo();
+  for (const [x0, z0] of [[FACILITY_X.taller + 2.2, 5.0], [FACILITY_X.bodega + 4.4, 4.9], [FACILITY_X.control + 1.4, 5.4]]) {
+    cg.plane(x0, Y + 0.004, 2.7, 0.9, z0 - 2.7, 0x2a3270);
+    for (const ex of [0, 0.86]) cg.box(x0 + ex, Y, 2.7, 0.04, 0.5, z0 - 2.7, 0x3a4580);
+    for (let zz = 3.0; zz < z0; zz += 0.6) cg.sphere(x0 + 0.45, Y + 0.45, zz, 0.03, 0xffe3a0, 5, true);
+  }
+  root.add(cg.build(SUBMAT.solid, SUBMAT.glow, 'corridors'));
   facility('taller', 'Taller y cocheras', 'taller', FACILITY_X.taller, 5.0, 11);
   facility('bodega', 'Bodega', 'bodega', FACILITY_X.bodega, 4.9, 2);
   facility('control', 'Control de trenes', 'control', FACILITY_X.control, 5.4, 13);

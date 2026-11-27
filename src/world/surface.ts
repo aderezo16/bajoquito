@@ -41,7 +41,7 @@ const house = (g: G, r: Rng, x: number, z: number, w: number, d: number, h: numb
 const tree = (g: G, r: Rng, x: number, z: number, k = 1) => use('arbol')(g, r, { x, z, k });
 /** A mid-rise building from the workshop model «Edificio», sized for its lot. */
 const tower = (g: G, r: Rng, x: number, z: number, colsFrente: number, colsLado: number, pisos: number, pared: string) =>
-  buildModel(approved('edificio'), g, r, { ...approved('edificio').defaults, x, z, colsFrente, colsLado, pisos: Math.min(10, pisos), pared, iluminadas: 0.35 } as never);
+  buildModel(approved('edificio'), g, r, { ...approved('edificio').defaults, x, z, colsFrente, colsLado, pisos: Math.min(10, pisos), pared, cornisa: r.pick(['#F6C98E', '#E9EDF5', '#C9CED8', '#E8D9BE', '#9AA6C4']), iluminadas: 0.35 } as never);
 const lamp = (g: G, x: number, z: number) => use('farol')(g, rng(1), { x, z });
 const trafficPole = (g: G, x: number, z: number) => use('semaforo')(g, rng(1), { x, z });
 const stationPavilion = (g: G, x: number, zc: number, broken = false) => use('estacion-superficie')(g, rng(1), { x: x - 1.55, z: 1.35, zc, broken });

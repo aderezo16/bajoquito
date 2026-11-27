@@ -36,6 +36,7 @@ export class CityFx {
   private adState: string[] = [];
   private litter: THREE.Group[] = [];
   private lights: THREE.PointLight[] = [];
+  private facilityLights: THREE.PointLight[] = [];
   private dark: number[] = Array(15).fill(0);
   private protestOn = '';
   private protestSign: THREE.Mesh | null = null;
@@ -73,6 +74,12 @@ export class CityFx {
     }
     // a few warm lights follow the camera from station to station underground
     for (let k = 0; k < 5; k++) { const l = new THREE.PointLight(0xffd9a0, 6, 6, 1.6); this.sub.add(l); this.lights.push(l); }
+    // the yard, the warehouse and the control room have their own lamps
+    for (const id of ['taller', 'bodega', 'control']) {
+      const p = this.place(id, 'sub'); if (!p) continue;
+      const l = new THREE.PointLight(id === 'control' ? 0xbfe0ff : 0xffe3a0, id === 'bodega' ? 4 : 5, 9, 1.2);
+      l.position.set(p.anchor.x, Y + 2.4, p.anchor.z + 1.2); this.sub.add(l); this.facilityLights.push(l);
+    }
 
     // TV van (shows up when there is a scandal)
     const vg = new Geo();
@@ -207,6 +214,7 @@ export class CityFx {
     if (this.ledTex) this.ledTex.offset.x = (t * 0.035) % 1;
     // lights: the nearest stations to the camera, dimmer if the station is dark
     const nearest = [...Array(15).keys()].sort((a, b) => Math.abs(stationX(a) - focusX) - Math.abs(stationX(b) - focusX)).slice(0, this.lights.length);
+    this.facilityLights.forEach(l => (l.visible = view === 'sub'));
     this.lights.forEach((l, k) => { const i = nearest[k]; l.position.set(stationX(i), Y + 1.6, -1.6); l.intensity = 6 * (1 - this.dark[i] * 0.85); l.visible = view === 'sub'; });
     void zoneOf;
   }

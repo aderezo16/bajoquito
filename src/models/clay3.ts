@@ -149,7 +149,7 @@ export function taller(g: Geo, _r: Rng, p: Params) {
 export function control(g: Geo, _r: Rng, p: Params) {
   const { x, z } = p, Y = num(p, 'y'), w = num(p, 'ancho'), d = num(p, 'fondo');
   const wall = col(p, 'pared'), scr = col(p, 'pantallas');
-  g.tag('piso'); g.plane(x, Y + 0.01, z, w, d, tint(wall, 0.7));
+  g.tag('piso'); g.plane(x, Y + 0.01, z, w, d, tint(wall, 1.15));
   g.tag('paredes'); g.roundBox(x, Y, z - 0.1, w, 1.5, 0.1, wall, 0.02); g.roundBox(x - 0.1, Y, z, 0.1, 1.5, d, tint(wall, 0.9), 0.02);
   g.roundBox(x, Y, z + d - 0.1, w, 0.25, 0.1, wall, 0.02);
   g.tag('mapa de la línea');
@@ -216,6 +216,6 @@ export function registerClay3(register: (d: ModelDef) => void) {
     versions: v1(taller, S.taller, { y: 0, ancho: 8.6, fondo: 4.2, trenesAdentro: 3, trabajadores: 5, luces: 2, pared: '#2F3B78', piso: '#4A5590', trenes: '#F3F6FC', franja: '#FF6B2C' },
       'Primera versión: nave con tres vías, fosas, trenes en revisión, grúa, lámparas y personal.') });
   register({ id: 'control', name: 'Control de trenes', group: 'Estaciones', approved: 'v1',
-    versions: v1(control, S.control, { y: 0, ancho: 4.2, fondo: 3.0, puestos: 6, operadores: true, pared: '#26306A', pantallas: '#7CC4FF' },
+    versions: v1(control, S.control, { y: 0, ancho: 5.0, fondo: 3.2, puestos: 6, operadores: true, pared: '#3A4A8C', pantallas: '#7CC4FF' },
       'Primera versión: sala con el mapa de la línea, puestos con pantallas y operadores.') });
 }
