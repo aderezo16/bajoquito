@@ -9,10 +9,10 @@ export interface Crossing { x: number; heads: { car: THREE.Mesh[]; ped: THREE.Me
 
 export const MAT = {
   solid: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.88, metalness: 0, flatShading: true }),
-  glow: new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new THREE.Color(1.6, 1.6, 1.6) }),
+  glow: new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new THREE.Color(1.12, 1.12, 1.12) }),
   hit: new THREE.MeshBasicMaterial({ visible: false }),
-  red: new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 0.45, 0.45), toneMapped: false }),
-  green: new THREE.MeshBasicMaterial({ color: new THREE.Color(0.45, 2.0, 1.0), toneMapped: false }),
+  red: new THREE.MeshBasicMaterial({ color: new THREE.Color(1.35, 0.32, 0.32), toneMapped: false }),
+  green: new THREE.MeshBasicMaterial({ color: new THREE.Color(0.32, 1.3, 0.7), toneMapped: false }),
   off: new THREE.MeshBasicMaterial({ color: 0x1b2244 }),
 };
 

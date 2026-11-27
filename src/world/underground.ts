@@ -124,7 +124,7 @@ export function buildUnderground() {
     grp.add(hit); grp.userData.place = 'bodega';
     root.add(grp);
     places.push({ id: 'bodega', name: 'Bodega', kind: 'building', view: 'sub', group: grp, anchor: new THREE.Vector3((bx0 + bx1) / 2, Y + 2.2, bz0 + 1.5), hit: [hit] });
-    const l = new THREE.PointLight(0xffe3a0, 8, 7, 1.5); l.position.set((bx0 + bx1) / 2, Y + 1.8, (bz0 + bz1) / 2); root.add(l);
+    const l = new THREE.PointLight(0xffe3a0, 3.5, 8, 1.2); l.position.set((bx0 + bx1) / 2, Y + 2.6, (bz0 + bz1) / 2); root.add(l);
   }
   return { root, places };
 }

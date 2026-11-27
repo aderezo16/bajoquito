@@ -60,7 +60,7 @@ const outline = new OutlinePass(new THREE.Vector2(1, 1), scene, rig.camera);
 Object.assign(outline, { edgeStrength: 4, edgeGlow: 0.4, edgeThickness: 1.6, pulsePeriod: 0 });
 outline.visibleEdgeColor.set(0xffc857); outline.hiddenEdgeColor.set(0x8a6a20);
 composer.addPass(outline);
-const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.55, 0.5, 1.0);
+const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.28, 0.32, 1.0);   // soft glow, only for things brighter than white
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
