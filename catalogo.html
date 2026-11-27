@@ -3,36 +3,42 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Bajo Quito · Catálogo de modelos</title>
+  <title>Bajo Quito · Taller de modelos</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet" />
 </head>
 <body>
   <div id="cat">
     <aside id="side">
-      <div class="brand"><b>Bajo Quito</b><span>Catálogo de modelos</span></div>
+      <div class="brand"><b>Bajo Quito</b><span>Taller de modelos</span></div>
       <nav id="list"></nav>
-      <div class="legend"><span class="st ok">aprobado</span> lo usa el juego · <span class="st rev">en revisión</span> solo aquí</div>
+      <div class="legend"><span class="st ok">aprobado</span> lo usa el juego<br /><span class="st rev">en revisión</span> solo aquí · <span class="ed">✎</span> con tus ajustes</div>
     </aside>
     <main id="stage">
       <canvas id="view"></canvas>
       <div id="bar">
-        <div class="seg" id="light"><button data-l="day">Día</button><button data-l="night" class="on">Noche</button></div>
+        <div class="seg" id="light"><button data-l="day" class="on">Día</button><button data-l="night">Noche</button></div>
         <button class="tg on" id="spin">Girar</button>
-        <button class="tg" id="scale">Persona de escala</button>
-        <button class="tg" id="compare" hidden>Comparar con la aprobada</button>
-        <button class="tg" id="all" hidden>Ver los tres juntos</button>
+        <button class="tg" id="scale" title="Muestra una persona al lado para ver el tamaño">Escala</button>
+        <button class="tg" id="compare" hidden title="Pone al lado la versión que usa el juego">Comparar</button>
       </div>
       <section id="info">
         <div class="head"><h1 id="name"></h1><span id="status" class="st"></span></div>
         <div id="versions"></div>
-        <div class="meta" id="meta"></div>
         <p id="notes"></p>
-        <div class="ask">Para pedir un cambio, dime el nombre y qué quieres: <i>«<span id="askname"></span>: …»</i></div>
       </section>
       <div id="tags"></div>
       <div id="help">Arrastra para girar · rueda para acercar · clic derecho para mover</div>
     </main>
+    <aside id="editor">
+      <div class="eh"><b>Ajustes</b><span id="ebase"></span></div>
+      <div id="controls"></div>
+      <div id="save">
+        <textarea id="note" rows="2" placeholder="Nota para Claude (opcional): qué buscas con estos cambios"></textarea>
+        <div class="row"><button id="bsave" class="primary">Guardar mis ajustes</button><button id="bundo">Deshacer</button><button id="bbase">Valores base</button></div>
+        <div id="estatus"></div>
+      </div>
+    </aside>
   </div>
   <script type="module" src="/src/catalog/main.ts"></script>
 </body>

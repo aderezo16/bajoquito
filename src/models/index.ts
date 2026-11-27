@@ -3,5 +3,7 @@ import './city';
 import './landmarks';
 import './metro';
 import './people';
-import './styles';
+import { registerClay } from './clay';
+import { register } from './registry';
+registerClay(register);
 export * from './registry';

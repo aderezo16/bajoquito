@@ -42,6 +42,25 @@ export class Geo {
     g.scale(1, sy, 1); g.translate(x, y, z);
     this.push(g, color);
   }
+  /** Rounded box centred at (cx,cy,cz), rotated (radians, XYZ order). Used for sloped roof panels. */
+  rbox(cx: number, cy: number, cz: number, w: number, h: number, d: number, rx: number, ry: number, rz: number, color: number, radius = 0.03) {
+    const g = new RoundedBoxGeometry(w, h, d, 2, Math.min(radius, w / 2, h / 2, d / 2));
+    g.rotateX(rx); g.rotateY(ry); g.rotateZ(rz);
+    g.translate(cx, cy, cz);
+    this.push(g, color);
+  }
+  /** Wheel: cylinder lying along z. */
+  wheel(x: number, y: number, z: number, r: number, w: number, color: number) {
+    const g = new THREE.CylinderGeometry(r, r, w, 16);
+    g.rotateX(Math.PI / 2); g.translate(x, y, z);
+    this.push(g, color);
+  }
+  /** Smooth sphere / ellipsoid. */
+  blob(x: number, y: number, z: number, r: number, color: number, sy = 1, seg = 20, glow = false) {
+    const g = new THREE.SphereGeometry(r, seg, Math.max(8, seg * 0.6));
+    g.scale(1, sy, 1); g.translate(x, y, z);
+    this.push(g, color, glow);
+  }
   capsule(x: number, y: number, z: number, r: number, len: number, color: number) {
     const g = new THREE.CapsuleGeometry(r, len, 4, 10);
     g.translate(x, y + len / 2 + r, z);
